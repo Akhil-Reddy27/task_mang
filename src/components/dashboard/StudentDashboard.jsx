@@ -34,10 +34,10 @@ const StudentDashboard = () => {
   const [examTimeLeft, setExamTimeLeft] = useState(null)
 
   const [stats, setStats] = useState({
-    pendingTasks: 4,
-    completedTasks: 12,
-    upcomingExams: 3,
-    averageScore: 85,
+    pendingTasks: 0,
+    completedTasks: 0,
+    upcomingExams: 0,
+    averageScore: 0,
     totalSubjects: 5,
     studyHours: 24,
   })
@@ -48,7 +48,7 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(false)
   const [currentDate, setCurrentDate] = useState(new Date())
 
-  // Mock exam questions
+  // Mock exam questions for demo
   const mockExamQuestions = [
     {
       id: 1,
@@ -70,122 +70,75 @@ const StudentDashboard = () => {
     },
   ]
 
+  // Fetch dashboard data only once on component mount
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true)
       try {
-        // Attempt to fetch real data from API
+        // Fetch real exams from API
+        const examsResponse = await axios.get("/api/exams")
+        console.log("Fetched exams:", examsResponse.data)
+        
+        // Transform API data to match component structure
+        const transformedExams = examsResponse.data.map(exam => ({
+          id: exam._id,
+          title: exam.title,
+          subject: exam.subject,
+          description: exam.description,
+          date: exam.startDate,
+          duration: exam.duration,
+          status: new Date() < new Date(exam.startDate) ? "upcoming" : 
+                  new Date() > new Date(exam.endDate) ? "completed" : "active",
+          passingScore: exam.passingScore,
+          questions: exam.questions || mockExamQuestions,
+        }))
+        
+        setExams(transformedExams)
+
+        // Fetch real tasks from API
         try {
           const tasksResponse = await axios.get("/api/tasks")
-          if (tasksResponse.data && Array.isArray(tasksResponse.data)) {
-            setTasks(tasksResponse.data)
-          }
+          console.log("Fetched tasks:", tasksResponse.data)
+          
+          const transformedTasks = tasksResponse.data.map(task => ({
+            id: task._id,
+            title: task.title,
+            subject: task.subject,
+            description: task.description,
+            dueDate: task.dueDate,
+            status: task.status.toLowerCase(),
+            priority: task.priority.toLowerCase(),
+            progress: task.status === "COMPLETED" ? 100 : 
+                     task.status === "IN_PROGRESS" ? 50 : 0,
+          }))
+          
+          setTasks(transformedTasks)
         } catch (error) {
-          console.log("Using mock task data")
+          console.error("Error fetching tasks:", error)
+          // Set empty array if tasks fail to load
+          setTasks([])
         }
 
-        try {
-          const examsResponse = await axios.get("/api/exams")
-          if (examsResponse.data && Array.isArray(examsResponse.data)) {
-            setExams(examsResponse.data)
-          }
-        } catch (error) {
-          console.log("Using mock exam data")
-        }
+        // Update stats based on real data
+        const pendingTasks = transformedTasks.filter(t => t.status === "assigned" || t.status === "pending").length
+        const completedTasks = transformedTasks.filter(t => t.status === "completed").length
+        const upcomingExams = transformedExams.filter(e => e.status === "upcoming").length
 
-        // If API calls failed or returned empty data, use mock data
-        if (tasks.length === 0) {
-          setTasks([
-            {
-              id: 1,
-              title: "Chemistry Lab Report",
-              subject: "Chemistry",
-              description: "Organic Chemistry Analysis - Benzene Reactions",
-              dueDate: "2025-06-12T23:59:00",
-              status: "pending",
-              priority: "high",
-              progress: 60,
-            },
-            {
-              id: 2,
-              title: "Mathematics Assignment",
-              subject: "Mathematics",
-              description: "Calculus Problems - Integration and Differentiation",
-              dueDate: "2025-06-09T23:59:00",
-              status: "completed",
-              priority: "medium",
-              progress: 100,
-              score: 92,
-            },
-            {
-              id: 3,
-              title: "Physics Problem Set",
-              subject: "Physics",
-              description: "Mechanics and Thermodynamics",
-              dueDate: "2025-06-15T23:59:00",
-              status: "in_progress",
-              priority: "medium",
-              progress: 30,
-            },
-            {
-              id: 4,
-              title: "English Literature Essay",
-              subject: "English",
-              description: "Analysis of Shakespeare's Hamlet",
-              dueDate: "2025-06-18T23:59:00",
-              status: "pending",
-              priority: "low",
-              progress: 0,
-            },
-          ])
-        }
+        setStats(prev => ({
+          ...prev,
+          pendingTasks,
+          completedTasks,
+          upcomingExams,
+        }))
 
-        if (exams.length === 0) {
-          setExams([
-            {
-              id: 1,
-              title: "Biology Final Exam",
-              subject: "Biology",
-              description: "Comprehensive final examination covering all topics",
-              date: "2025-06-18T09:00:00",
-              duration: 180,
-              status: "upcoming",
-              passingScore: 70,
-              questions: mockExamQuestions,
-            },
-            {
-              id: 2,
-              title: "Physics Mid-term",
-              subject: "Physics",
-              description: "Mechanics and Thermodynamics",
-              date: "2025-06-25T14:00:00",
-              duration: 120,
-              status: "upcoming",
-              passingScore: 75,
-              questions: mockExamQuestions,
-            },
-            {
-              id: 3,
-              title: "Mathematics Quiz",
-              subject: "Mathematics",
-              description: "Calculus and Algebra",
-              date: "2025-06-09T10:00:00",
-              duration: 60,
-              status: "completed",
-              score: 92,
-              passingScore: 70,
-              questions: mockExamQuestions,
-            },
-          ])
-        }
-
+        // Set mock recent activity and deadlines
         setRecentActivity([
           {
             id: 1,
             type: "task",
             title: "Mathematics Assignment - Calculus",
             status: "completed",
-            date: "2025-06-09T14:30:00",
+            date: new Date().toISOString(),
             score: 92,
             subject: "Mathematics",
           },
@@ -195,65 +148,48 @@ const StudentDashboard = () => {
             title: "Physics Mid-term Examination",
             status: "graded",
             score: 88,
-            date: "2025-06-07T10:00:00",
+            date: new Date(Date.now() - 86400000).toISOString(),
             subject: "Physics",
-          },
-          {
-            id: 3,
-            type: "task",
-            title: "History Research Paper",
-            status: "submitted",
-            date: "2025-06-05T09:15:00",
-            subject: "History",
-          },
-          {
-            id: 4,
-            type: "task",
-            title: "Chemistry Lab Report",
-            status: "pending",
-            dueDate: "2025-06-12T23:59:00",
-            subject: "Chemistry",
           },
         ])
 
         setUpcomingDeadlines([
-          {
-            id: 1,
-            title: "Chemistry Lab Report",
-            subject: "Chemistry",
+          ...transformedTasks.filter(task => task.status !== "completed").slice(0, 3).map(task => ({
+            id: task.id,
+            title: task.title,
+            subject: task.subject,
             type: "Assignment",
-            dueDate: "2025-06-12T23:59:00",
-            priority: "high",
-          },
-          {
-            id: 2,
-            title: "English Literature Essay",
-            subject: "English",
-            type: "Essay",
-            dueDate: "2025-06-15T23:59:00",
-            priority: "medium",
-          },
-          {
-            id: 3,
-            title: "Biology Final Exam",
-            subject: "Biology",
+            dueDate: task.dueDate,
+            priority: task.priority,
+          })),
+          ...transformedExams.filter(exam => exam.status === "upcoming").slice(0, 2).map(exam => ({
+            id: exam.id,
+            title: exam.title,
+            subject: exam.subject,
             type: "Exam",
-            dueDate: "2025-06-18T09:00:00",
+            dueDate: exam.date,
             priority: "high",
-          },
+          }))
         ])
+
       } catch (error) {
         console.error("Error fetching dashboard data:", error)
         toast.error("Failed to load dashboard data")
+        
+        // Set empty arrays on error
+        setExams([])
+        setTasks([])
+        setRecentActivity([])
+        setUpcomingDeadlines([])
       } finally {
         setLoading(false)
       }
     }
 
     fetchDashboardData()
-  }, [])
+  }, []) // Empty dependency array - only run once on mount
 
-  // Timer for exam
+  // Timer for exam - separate useEffect
   useEffect(() => {
     let timer
     if (examTimeLeft > 0) {
@@ -286,14 +222,11 @@ const StudentDashboard = () => {
     }
     setTasks((prev) => [...prev, newTask])
     setShowTaskModal(false)
-    toast.success("Task added successfully!")
   }
 
   const handleAddEvent = (eventData) => {
-    // Add event logic here
     console.log("Adding event:", eventData)
     setShowEventModal(false)
-    toast.success("Event added to calendar!")
   }
 
   const handleStartExam = (exam) => {
@@ -323,25 +256,46 @@ const StudentDashboard = () => {
     }
   }
 
-  const handleSubmitExam = () => {
-    // Calculate score
-    let correct = 0
-    selectedExam.questions.forEach((question) => {
-      if (examAnswers[question.id] === question.correct) {
-        correct++
+  const handleSubmitExam = async () => {
+    try {
+      // Calculate score
+      let correct = 0
+      selectedExam.questions.forEach((question) => {
+        if (examAnswers[question.id] === question.correct) {
+          correct++
+        }
+      })
+      const score = Math.round((correct / selectedExam.questions.length) * 100)
+
+      // Submit exam result to API
+      const examData = {
+        answers: selectedExam.questions.map((question, index) => ({
+          questionId: question.id,
+          selectedOptions: [examAnswers[question.id] || 0],
+          isCorrect: examAnswers[question.id] === question.correct,
+          points: examAnswers[question.id] === question.correct ? 1 : 0,
+          timeSpent: 60, // Mock time spent
+        })),
+        timeSpent: Math.floor((selectedExam.duration * 60 - examTimeLeft) / 60),
+        startedAt: new Date(Date.now() - (selectedExam.duration * 60 - examTimeLeft) * 1000).toISOString(),
       }
-    })
-    const score = Math.round((correct / selectedExam.questions.length) * 100)
 
-    // Update exam with score
-    setExams((prev) =>
-      prev.map((exam) => (exam.id === selectedExam.id ? { ...exam, status: "completed", score } : exam)),
-    )
+      await axios.post(`/api/exams/${selectedExam.id}/submit`, examData)
 
-    setShowExamModal(false)
-    setSelectedResult({ ...selectedExam, score, correct, total: selectedExam.questions.length })
-    setShowResultModal(true)
-    toast.success("Exam submitted successfully!")
+      // Update exam with score locally
+      setExams((prev) =>
+        prev.map((exam) => (exam.id === selectedExam.id ? { ...exam, status: "completed", score } : exam)),
+      )
+
+      setShowExamModal(false)
+      setSelectedResult({ ...selectedExam, score, correct, total: selectedExam.questions.length })
+      setShowResultModal(true)
+      
+      toast.success("Exam submitted successfully!")
+    } catch (error) {
+      console.error("Error submitting exam:", error)
+      toast.error("Failed to submit exam")
+    }
   }
 
   const handleViewResult = (exam) => {
@@ -391,6 +345,7 @@ const StudentDashboard = () => {
       case "in_progress":
         return "primary"
       case "pending":
+      case "assigned":
         return "warning"
       case "overdue":
         return "danger"
@@ -401,12 +356,10 @@ const StudentDashboard = () => {
 
   const handleTaskStatusChange = (taskId, newStatus) => {
     setTasks((prevTasks) => prevTasks.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task)))
-    toast.success(`Task marked as ${newStatus}`)
   }
 
   const handleTaskDelete = (taskId) => {
     setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId))
-    toast.success("Task deleted successfully")
   }
 
   // Chart data
@@ -417,7 +370,7 @@ const StudentDashboard = () => {
         data: [
           tasks.filter((t) => t.status === "completed").length,
           tasks.filter((t) => t.status === "in_progress").length,
-          tasks.filter((t) => t.status === "pending").length,
+          tasks.filter((t) => t.status === "pending" || t.status === "assigned").length,
         ],
         backgroundColor: ["#10b981", "#3b82f6", "#f59e0b"],
         borderWidth: 0,
@@ -949,17 +902,14 @@ const StudentDashboard = () => {
               {dayEvents.slice(0, 2).map((event, index) => (
                 <div
                   key={index}
-                  className={`event-item ${event.type || (event.dueDate ? "task" : "exam")}`}
+                  className={`event-dot ${event.type || (event.dueDate ? "task" : "exam")}`}
                   title={event.title}
-                >
-                  <i className={`bi ${event.dueDate ? "bi-list-task" : "bi-clipboard-check"}`}></i>
-                  <span className="event-title">{event.title}</span>
-                </div>
+                ></div>
               ))}
-              {dayEvents.length > 2 && <div className="event-more">+{dayEvents.length - 2} more</div>}
+              {dayEvents.length > 2 && <div className="event-more">+{dayEvents.length - 2}</div>}
             </div>
           )}
-        </motion.div>
+        </motion.div>,
       )
     }
 
@@ -978,7 +928,7 @@ const StudentDashboard = () => {
         </div>
         <div className="calendar-weekdays">
           {weekdays.map((day) => (
-            <div key={day} className="weekday-header">
+            <div key={day} className="weekday">
               {day}
             </div>
           ))}
@@ -1184,34 +1134,41 @@ const StudentDashboard = () => {
                   </h5>
                 </div>
                 <div className="card-body">
-                  {upcomingDeadlines.map((deadline, index) => (
-                    <motion.div
-                      key={deadline.id}
-                      className="deadline-item"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      whileHover={{ x: 10, scale: 1.02 }}
-                    >
-                      <div className="deadline-content">
-                        <h6 className="deadline-title">{deadline.title}</h6>
-                        <div className="deadline-meta">
-                          <span className="badge bg-light text-dark">{deadline.subject}</span>
-                          <span className="badge bg-secondary">{deadline.type}</span>
+                  {upcomingDeadlines.length === 0 ? (
+                    <div className="text-center text-muted py-4">
+                      <i className="bi bi-calendar-check fs-1 mb-2"></i>
+                      <p>No upcoming deadlines</p>
+                    </div>
+                  ) : (
+                    upcomingDeadlines.map((deadline, index) => (
+                      <motion.div
+                        key={deadline.id}
+                        className="deadline-item"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{ x: 10, scale: 1.02 }}
+                      >
+                        <div className="deadline-content">
+                          <h6 className="deadline-title">{deadline.title}</h6>
+                          <div className="deadline-meta">
+                            <span className="badge bg-light text-dark">{deadline.subject}</span>
+                            <span className="badge bg-secondary">{deadline.type}</span>
+                          </div>
+                          <div className="deadline-footer">
+                            <small className="text-muted">{formatDate(deadline.dueDate)}</small>
+                            <motion.span
+                              className={`badge bg-${getPriorityColor(deadline.priority)}`}
+                              animate={{ scale: [1, 1.1, 1] }}
+                              transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+                            >
+                              {getTimeUntilDeadline(deadline.dueDate)}
+                            </motion.span>
+                          </div>
                         </div>
-                        <div className="deadline-footer">
-                          <small className="text-muted">{formatDate(deadline.dueDate)}</small>
-                          <motion.span
-                            className={`badge bg-${getPriorityColor(deadline.priority)}`}
-                            animate={{ scale: [1, 1.1, 1] }}
-                            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                          >
-                            {getTimeUntilDeadline(deadline.dueDate)}
-                          </motion.span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    ))
+                  )}
                 </div>
               </motion.div>
             </div>
@@ -1279,19 +1236,15 @@ const StudentDashboard = () => {
                   <h5 className="mb-0">All Tasks</h5>
                 </div>
                 <div className="card-body">
-                  <div className="tasks-grid">
-                    {tasks.length === 0 ? (
-                      <div className="text-center p-5">
-                        <i className="bi bi-clipboard text-muted\" style={{ fontSize: "3rem" }}></i>
-                        <h5 className="mt-3">No Tasks Found</h5>
-                        <p className="text-muted">You don't have any tasks yet.</p>
-                        <button className="btn btn-primary" onClick={() => setShowTaskModal(true)}>
-                          <i className="bi bi-plus-lg me-2"></i>
-                          Create Your First Task
-                        </button>
-                      </div>
-                    ) : (
-                      tasks.map((task, index) => (
+                  {tasks.length === 0 ? (
+                    <div className="text-center text-muted py-5">
+                      <i className="bi bi-clipboard fs-1 mb-3"></i>
+                      <h5>No tasks found</h5>
+                      <p>You don't have any assigned tasks yet.</p>
+                    </div>
+                  ) : (
+                    <div className="tasks-grid">
+                      {tasks.map((task, index) => (
                         <motion.div
                           key={task.id}
                           className="task-item"
@@ -1355,9 +1308,9 @@ const StudentDashboard = () => {
                             {task.score && <span className="badge bg-primary">{task.score}%</span>}
                           </div>
                         </motion.div>
-                      ))
-                    )}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </motion.div>
             </div>
@@ -1380,31 +1333,24 @@ const StudentDashboard = () => {
                 <motion.h3 className="fw-bold mb-0" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
                   Exams & Tests
                 </motion.h3>
-                <motion.button
-                  className="btn btn-primary btn-lg"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                >
-                  <i className="bi bi-calendar-plus me-2"></i>
-                  Schedule Exam
-                </motion.button>
               </div>
             </div>
 
             <div className="col-12">
-              <div className="row g-4">
-                {exams.length === 0 ? (
-                  <div className="col-12">
-                    <div className="text-center p-5">
-                      <i className="bi bi-clipboard text-muted\" style={{ fontSize: "3rem" }}></i>
-                      <h5 className="mt-3">No Exams Found</h5>
-                      <p className="text-muted">You don't have any exams yet.</p>
-                    </div>
-                  </div>
-                ) : (
-                  exams.map((exam, index) => (
+              {exams.length === 0 ? (
+                <motion.div
+                  className="text-center text-muted py-5"
+                  variants={cardVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <i className="bi bi-journal-text fs-1 mb-3"></i>
+                  <h5>No exams found</h5>
+                  <p>You don't have any assigned exams yet.</p>
+                </motion.div>
+              ) : (
+                <div className="row g-4">
+                  {exams.map((exam, index) => (
                     <div key={exam.id} className="col-lg-4 col-md-6">
                       <motion.div
                         className="exam-card"
@@ -1422,7 +1368,9 @@ const StudentDashboard = () => {
                                   ? "bg-success"
                                   : exam.status === "upcoming"
                                     ? "bg-warning"
-                                    : "bg-secondary"
+                                    : exam.status === "active"
+                                      ? "bg-primary"
+                                      : "bg-secondary"
                               }`}
                               animate={{ scale: [1, 1.1, 1] }}
                               transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
@@ -1455,7 +1403,7 @@ const StudentDashboard = () => {
                           </div>
                         </div>
                         <div className="exam-footer">
-                          {exam.status === "upcoming" ? (
+                          {exam.status === "upcoming" || exam.status === "active" ? (
                             <motion.button
                               className="btn btn-primary w-100"
                               onClick={() => handleStartExam(exam)}
@@ -1484,9 +1432,9 @@ const StudentDashboard = () => {
                         </div>
                       </motion.div>
                     </div>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </motion.div>
         )
@@ -1562,7 +1510,7 @@ const StudentDashboard = () => {
                     {[
                       { label: "Overall Grade", value: "A-", color: "success" },
                       { label: "Average Score", value: "85%", color: "primary" },
-                      { label: "Assignments Done", value: "12", color: "warning" },
+                      { label: "Assignments Done", value: tasks.filter(t => t.status === "completed").length, color: "warning" },
                       { label: "Study Time", value: "24h", color: "info" },
                     ].map((item, index) => (
                       <div key={index} className="col-md-3">
@@ -1706,414 +1654,6 @@ const StudentDashboard = () => {
       <EventModal />
       <ExamModal />
       <ResultModal />
-
-      {/* Styles for Exam Modal */}
-      <style jsx>{`
-        /* Exam Modal Styles */
-        .exam-overlay {
-          background: rgba(0, 0, 0, 0.8);
-        }
-
-        .exam-modal {
-          max-width: 800px;
-          width: 95%;
-        }
-
-        .exam-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 1.5rem;
-          background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-          color: white;
-        }
-
-        .exam-info h4 {
-          margin: 0;
-          font-weight: 700;
-        }
-
-        .exam-info p {
-          margin: 0;
-          opacity: 0.9;
-        }
-
-        .exam-timer {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          font-size: 1.2rem;
-          font-weight: 700;
-        }
-
-        .exam-progress {
-          padding: 1rem 1.5rem;
-          border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-        }
-
-        .exam-progress .progress {
-          height: 8px;
-          border-radius: 4px;
-          background: rgba(0, 0, 0, 0.1);
-          margin-bottom: 0.5rem;
-        }
-
-        .exam-question {
-          padding: 2rem 1.5rem;
-        }
-
-        .exam-question h5 {
-          margin-bottom: 1.5rem;
-          font-weight: 600;
-          color: var(--dark-color);
-        }
-
-        .options {
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-        }
-
-        .option {
-          display: flex;
-          align-items: center;
-          padding: 1rem;
-          border: 2px solid rgba(0, 0, 0, 0.1);
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .option:hover {
-          border-color: var(--primary-color);
-          background: rgba(99, 102, 241, 0.05);
-        }
-
-        .option.selected {
-          border-color: var(--primary-color);
-          background: rgba(99, 102, 241, 0.1);
-        }
-
-        .option-letter {
-          width: 30px;
-          height: 30px;
-          border-radius: 50%;
-          background: var(--primary-color);
-          color: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 600;
-          margin-right: 1rem;
-        }
-
-        .option-text {
-          flex: 1;
-          font-weight: 500;
-        }
-
-        .exam-navigation {
-          display: flex;
-          justify-content: space-between;
-          padding: 1.5rem;
-          border-top: 1px solid rgba(0, 0, 0, 0.1);
-        }
-
-        /* Result Modal Styles */
-        .result-modal {
-          max-width: 600px;
-        }
-
-        .result-header {
-          text-align: center;
-          padding: 2rem 1.5rem;
-          background: linear-gradient(135deg, var(--light-color), rgba(99, 102, 241, 0.05));
-        }
-
-        .result-icon {
-          width: 80px;
-          height: 80px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto 1rem;
-          font-size: 2.5rem;
-          color: white;
-        }
-
-        .result-icon.success {
-          background: linear-gradient(135deg, var(--success-color), #34d399);
-          animation: successPulse 2s infinite;
-        }
-
-        .result-icon.danger {
-          background: linear-gradient(135deg, var(--danger-color), #f87171);
-          animation: dangerShake 0.5s ease-in-out;
-        }
-
-        @keyframes successPulse {
-          0%,
-          100% {
-            transform: scale(1);
-          }
-          50% {
-            transform: scale(1.1);
-          }
-        }
-
-        @keyframes dangerShake {
-          0%,
-          100% {
-            transform: translateX(0);
-          }
-          25% {
-            transform: translateX(-5px);
-          }
-          75% {
-            transform: translateX(5px);
-          }
-        }
-
-        .result-header h3 {
-          margin-bottom: 0.5rem;
-          font-weight: 700;
-        }
-
-        .result-details {
-          padding: 2rem 1.5rem;
-          text-align: center;
-        }
-
-        .score-circle {
-          width: 150px;
-          height: 150px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto 2rem;
-          color: white;
-          position: relative;
-          animation: scoreReveal 1s ease-out;
-        }
-
-        @keyframes scoreReveal {
-          from {
-            transform: scale(0) rotate(180deg);
-            opacity: 0;
-          }
-          to {
-            transform: scale(1) rotate(0deg);
-            opacity: 1;
-          }
-        }
-
-        .score-value {
-          font-size: 2.5rem;
-          font-weight: 800;
-        }
-
-        .score-grade {
-          font-size: 1rem;
-          opacity: 0.9;
-        }
-
-        .result-stats {
-          display: flex;
-          justify-content: space-around;
-          gap: 1rem;
-        }
-
-        .stat {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          font-weight: 600;
-        }
-
-        .result-footer {
-          display: flex;
-          gap: 1rem;
-          justify-content: center;
-          padding: 1.5rem;
-          border-top: 1px solid rgba(0, 0, 0, 0.1);
-        }
-
-        /* Calendar Styles */
-        .calendar-container {
-          width: 100%;
-        }
-
-        .calendar-weekdays {
-          display: grid;
-          grid-template-columns: repeat(7, 1fr);
-          gap: 1px;
-          margin-bottom: 1px;
-          background-color: #e5e7eb;
-        }
-
-        .weekday-header {
-          background-color: #f8fafc;
-          padding: 1rem;
-          text-align: center;
-          font-weight: 600;
-          color: #374151;
-          text-transform: uppercase;
-          font-size: 0.875rem;
-          letter-spacing: 0.05em;
-        }
-
-        .calendar-grid {
-          display: grid;
-          grid-template-columns: repeat(7, 1fr);
-          gap: 1px;
-          background-color: #e5e7eb;
-        }
-
-        .calendar-day {
-          background-color: white;
-          min-height: 120px;
-          padding: 0.75rem;
-          display: flex;
-          flex-direction: column;
-          transition: all 0.2s ease;
-          cursor: pointer;
-        }
-
-        .calendar-day:hover {
-          background-color: #f8fafc;
-        }
-
-        .calendar-day.today {
-          background-color: #dbeafe;
-          border: 2px solid #3b82f6;
-        }
-
-        .calendar-day.empty {
-          background-color: #f9fafb;
-          opacity: 0.5;
-          cursor: default;
-        }
-
-        .calendar-day.empty:hover {
-          background-color: #f9fafb;
-        }
-
-        .day-number {
-          font-weight: 600;
-          color: #1f2937;
-          margin-bottom: 0.5rem;
-          font-size: 0.875rem;
-        }
-
-        .calendar-day.today .day-number {
-          color: #1d4ed8;
-          font-weight: 700;
-        }
-
-        .day-events {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 0.25rem;
-        }
-
-        .event-item {
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
-          padding: 0.25rem 0.5rem;
-          border-radius: 4px;
-          font-size: 0.75rem;
-          font-weight: 500;
-          line-height: 1.2;
-          transition: all 0.2s ease;
-        }
-
-        .event-item:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .event-item.exam {
-          background-color: #fef2f2;
-          color: #dc2626;
-          border: 1px solid #fecaca;
-        }
-
-        .event-item.task {
-          background-color: #eff6ff;
-          color: #2563eb;
-          border: 1px solid #bfdbfe;
-        }
-
-        .event-title {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          flex: 1;
-        }
-
-        .event-more {
-          font-size: 0.7rem;
-          color: #6b7280;
-          font-weight: 500;
-          text-align: center;
-          padding: 0.125rem;
-        }
-
-        @media (max-width: 768px) {
-          .calendar-day {
-            min-height: 80px;
-            padding: 0.5rem;
-          }
-
-          .weekday-header {
-            padding: 0.75rem 0.5rem;
-            font-size: 0.75rem;
-          }
-
-          .event-item {
-            font-size: 0.7rem;
-            padding: 0.125rem 0.25rem;
-          }
-
-          .day-number {
-            font-size: 0.8rem;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .calendar-day {
-            min-height: 60px;
-            padding: 0.25rem;
-          }
-
-          .weekday-header {
-            padding: 0.5rem 0.25rem;
-            font-size: 0.7rem;
-          }
-
-          .event-item {
-            font-size: 0.65rem;
-          }
-
-          .event-title {
-            display: none;
-          }
-
-          .event-item {
-            justify-content: center;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            padding: 0;
-          }
-        }
-      `}</style>
     </div>
   )
 }
