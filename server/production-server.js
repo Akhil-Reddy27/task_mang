@@ -96,6 +96,61 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 
 const User = mongoose.model("User", userSchema)
 
+// Exam Schema
+const questionSchema = new mongoose.Schema({
+  question: { type: String, required: true },
+  type: { type: String, enum: ["SINGLE", "MULTIPLE"], default: "SINGLE" },
+  options: [{
+    text: String,
+    isCorrect: Boolean,
+  }],
+  explanation: { type: String },
+  topic: { type: String },
+  difficulty: { type: String, enum: ["EASY", "MEDIUM", "HARD"], default: "MEDIUM" },
+  points: { type: Number, default: 1 },
+})
+
+const examSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: { type: String },
+  subject: { type: String, required: true },
+  tutor: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  questions: [questionSchema],
+  duration: { type: Number, required: true }, // in minutes
+  startDate: { type: Date, required: true },
+  endDate: { type: Date, required: true },
+  attemptLimit: { type: Number, default: 1 },
+  passingScore: { type: Number, default: 60 },
+  showResultsImmediately: { type: Boolean, default: false },
+  showCorrectAnswers: { type: Boolean, default: false },
+  randomizeQuestions: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: true },
+}, {
+  timestamps: true,
+})
+
+const Exam = mongoose.model("Exam", examSchema)
+
+// Task Schema
+const taskSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  subject: { type: String, required: true },
+  tutor: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  dueDate: { type: Date, required: true },
+  priority: { type: String, enum: ["LOW", "MEDIUM", "HIGH", "URGENT"], default: "MEDIUM" },
+  status: { type: String, enum: ["ASSIGNED", "IN_PROGRESS", "SUBMITTED", "REVIEWED", "COMPLETED"], default: "ASSIGNED" },
+  instructions: { type: String },
+  maxScore: { type: Number, default: 100 },
+  isActive: { type: Boolean, default: true },
+}, {
+  timestamps: true,
+})
+
+const Task = mongoose.model("Task", taskSchema)
+
 // Connect to MongoDB
 console.log("🔌 Connecting to MongoDB Atlas...")
 mongoose
@@ -327,33 +382,170 @@ app.get("/api/auth/me", auth, async (req, res) => {
   }
 })
 
-// Tasks route placeholder
+// Tasks routes
 app.get("/api/tasks", auth, async (req, res) => {
   try {
-    // For now, return empty array - you can implement task logic later
-    res.json([])
+    console.log("=== TASKS REQUEST RECEIVED ===")
+    
+    const query = { isActive: { $ne: false } }
+
+    if (req.user.role === "TUTOR") {
+      query.tutor = req.user.userId
+    } else if (req.user.role === "STUDENT") {
+      query.assignedTo = req.user.userId
+    }
+
+    const tasks = await Task.find(query)
+      .populate("tutor", "fullName email")
+      .populate("assignedTo", "fullName email studentId")
+      .sort({ createdAt: -1 })
+
+    console.log(`✅ Found ${tasks.length} tasks`)
+    res.json(tasks)
   } catch (error) {
     console.error("❌ Tasks error:", error)
     res.status(500).json({ message: "Error fetching tasks", error: error.message })
   }
 })
 
-// Exams route placeholder
+app.post("/api/tasks", auth, async (req, res) => {
+  try {
+    console.log("=== CREATE TASK REQUEST ===")
+    
+    if (req.user.role !== "TUTOR") {
+      return res.status(403).json({ message: "Only tutors can create tasks" })
+    }
+
+    const task = new Task({
+      ...req.body,
+      tutor: req.user.userId,
+    })
+
+    await task.save()
+    await task.populate("tutor", "fullName email")
+    await task.populate("assignedTo", "fullName email studentId")
+
+    console.log("✅ Task created successfully:", task._id)
+    res.status(201).json({
+      message: "Task created successfully",
+      task,
+    })
+  } catch (error) {
+    console.error("❌ Create task error:", error)
+    res.status(500).json({ message: "Server error", error: error.message })
+  }
+})
+
+// Exams routes
 app.get("/api/exams", auth, async (req, res) => {
   try {
-    // For now, return empty array - you can implement exam logic later
-    res.json([])
+    console.log("=== EXAMS REQUEST RECEIVED ===")
+    
+    const query = { isActive: { $ne: false } }
+
+    if (req.user.role === "TUTOR") {
+      query.tutor = req.user.userId
+    } else if (req.user.role === "STUDENT") {
+      query.assignedTo = req.user.userId
+    }
+
+    const exams = await Exam.find(query)
+      .populate("tutor", "fullName")
+      .populate("assignedTo", "fullName email")
+      .sort({ createdAt: -1 })
+
+    console.log(`✅ Found ${exams.length} exams`)
+    res.json(exams)
   } catch (error) {
     console.error("❌ Exams error:", error)
     res.status(500).json({ message: "Error fetching exams", error: error.message })
   }
 })
 
+app.post("/api/exams", auth, async (req, res) => {
+  try {
+    console.log("=== CREATE EXAM REQUEST ===")
+    console.log("Request body:", { ...req.body, questions: `${req.body.questions?.length || 0} questions` })
+    
+    if (req.user.role !== "TUTOR") {
+      return res.status(403).json({ message: "Only tutors can create exams" })
+    }
+
+    // Validate required fields
+    const { title, subject, startDate, endDate, assignedTo, questions } = req.body
+
+    if (!title || !subject || !startDate || !endDate) {
+      return res.status(400).json({ 
+        message: "Missing required fields",
+        required: ["title", "subject", "startDate", "endDate"]
+      })
+    }
+
+    if (!assignedTo || assignedTo.length === 0) {
+      return res.status(400).json({ message: "Please assign the exam to at least one student" })
+    }
+
+    if (!questions || questions.length === 0) {
+      return res.status(400).json({ message: "Please add at least one question" })
+    }
+
+    // Validate dates
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const now = new Date()
+
+    if (start <= now) {
+      return res.status(400).json({ message: "Start date must be in the future" })
+    }
+
+    if (end <= start) {
+      return res.status(400).json({ message: "End date must be after start date" })
+    }
+
+    // Validate questions
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i]
+      if (!question.question || !question.question.trim()) {
+        return res.status(400).json({ message: `Question ${i + 1} is empty` })
+      }
+
+      const hasCorrectAnswer = question.options && question.options.some(opt => opt.isCorrect)
+      if (!hasCorrectAnswer) {
+        return res.status(400).json({ message: `Question ${i + 1} must have at least one correct answer` })
+      }
+
+      const hasEmptyOption = question.options && question.options.some(opt => !opt.text || !opt.text.trim())
+      if (hasEmptyOption) {
+        return res.status(400).json({ message: `Question ${i + 1} has empty options` })
+      }
+    }
+
+    const exam = new Exam({
+      ...req.body,
+      tutor: req.user.userId,
+    })
+
+    await exam.save()
+    await exam.populate("tutor", "fullName")
+    await exam.populate("assignedTo", "fullName email")
+
+    console.log("✅ Exam created successfully:", exam._id)
+    res.status(201).json({
+      message: "Exam created successfully",
+      exam,
+    })
+  } catch (error) {
+    console.error("❌ Create exam error:", error)
+    res.status(500).json({ message: "Server error", error: error.message })
+  }
+})
+
 // 404 handler
 app.use("*", (req, res) => {
-  console.log("❌ 404 - Route not found:", req.originalUrl)
+  console.log("❌ 404 - Route not found:", req.method, req.originalUrl)
   res.status(404).json({
     message: "Route not found",
+    method: req.method,
     path: req.originalUrl,
     availableRoutes: [
       "GET /health",
@@ -362,7 +554,9 @@ app.use("*", (req, res) => {
       "GET /api/auth/me",
       "GET /api/users",
       "GET /api/tasks",
+      "POST /api/tasks",
       "GET /api/exams",
+      "POST /api/exams",
     ],
   })
 })
@@ -379,6 +573,8 @@ app.listen(PORT, () => {
   🔗 Login endpoint: http://localhost:${PORT}/api/auth/login (POST)
   🔗 Me endpoint: http://localhost:${PORT}/api/auth/me (GET)
   🔗 Users endpoint: http://localhost:${PORT}/api/users (GET)
+  🔗 Tasks endpoint: http://localhost:${PORT}/api/tasks (GET/POST)
+  🔗 Exams endpoint: http://localhost:${PORT}/api/exams (GET/POST)
   
   This is the production server with MongoDB integration.
   `)
