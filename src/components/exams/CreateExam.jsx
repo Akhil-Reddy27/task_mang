@@ -964,7 +964,7 @@ const CreateExam = () => {
           </div>
         )}
 
-        {/* Navigation Buttons */}
+        {/* Navigation Buttons - ENHANCED WITH BETTER VISIBILITY */}
         <div className="row mt-4">
           <div className="col-12">
             <div className="d-flex justify-content-between">
