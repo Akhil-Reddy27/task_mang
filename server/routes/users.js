@@ -4,10 +4,66 @@ const bcrypt = require("bcryptjs")
 const auth = require("../middleware/auth")
 const User = require("../models/User")
 
+// Get all users with optional role filtering
+router.get("/", auth, async (req, res) => {
+  try {
+    const { role, search, page = 1, limit = 20 } = req.query
+
+    const query = {}
+
+    // Filter by role if specified
+    if (role) {
+      query.role = role.toUpperCase()
+    }
+
+    // Search by name or email
+    if (search) {
+      query.$or = [
+        { fullName: { $regex: search, $options: "i" } }, 
+        { email: { $regex: search, $options: "i" } }
+      ]
+    }
+
+    // Only return active users
+    query.isActive = { $ne: false }
+
+    console.log("Fetching users with query:", query)
+
+    const users = await User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .exec()
+
+    const total = await User.countDocuments(query)
+
+    console.log(`Found ${users.length} users`)
+
+    res.json({
+      success: true,
+      users,
+      pagination: {
+        page: Number.parseInt(page),
+        limit: Number.parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    })
+  } catch (error) {
+    console.error("Error fetching users:", error)
+    res.status(500).json({
+      success: false,
+      message: "Error fetching users",
+      error: error.message,
+    })
+  }
+})
+
 // Get user profile
 router.get("/profile", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password")
+    const user = await User.findById(req.user.userId).select("-password")
 
     if (!user) {
       return res.status(404).json({
@@ -33,8 +89,8 @@ router.get("/profile", auth, async (req, res) => {
 // Update user profile
 router.put("/profile", auth, async (req, res) => {
   try {
-    const { name, email, institution, studentId, bio, phone } = req.body
-    const userId = req.user.id
+    const { fullName, email, institution, studentId, bio, phone } = req.body
+    const userId = req.user.userId
 
     // Check if email is already taken by another user
     if (email) {
@@ -52,16 +108,17 @@ router.put("/profile", auth, async (req, res) => {
     }
 
     const updateData = {}
-    if (name) updateData.name = name
+    if (fullName) updateData.fullName = fullName
     if (email) updateData.email = email
     if (institution) updateData.institution = institution
     if (studentId) updateData.studentId = studentId
     if (bio) updateData.bio = bio
     if (phone) updateData.phone = phone
 
-    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true, runValidators: true }).select(
-      "-password",
-    )
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { 
+      new: true, 
+      runValidators: true 
+    }).select("-password")
 
     res.json({
       success: true,
@@ -82,7 +139,7 @@ router.put("/profile", auth, async (req, res) => {
 router.put("/change-password", auth, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body
-    const userId = req.user.id
+    const userId = req.user.userId
 
     if (!currentPassword || !newPassword) {
       return res.status(400).json({
@@ -101,7 +158,7 @@ router.put("/change-password", auth, async (req, res) => {
     const user = await User.findById(userId)
 
     // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password)
+    const isCurrentPasswordValid = await user.comparePassword(currentPassword)
 
     if (!isCurrentPasswordValid) {
       return res.status(400).json({
@@ -110,15 +167,9 @@ router.put("/change-password", auth, async (req, res) => {
       })
     }
 
-    // Hash new password
-    const saltRounds = 12
-    const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds)
-
     // Update password
-    await User.findByIdAndUpdate(userId, {
-      password: hashedNewPassword,
-      passwordChangedAt: new Date(),
-    })
+    user.password = newPassword
+    await user.save()
 
     res.json({
       success: true,
@@ -129,52 +180,6 @@ router.put("/change-password", auth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error changing password",
-      error: error.message,
-    })
-  }
-})
-
-// Get all users (for admin or chat purposes)
-router.get("/", auth, async (req, res) => {
-  try {
-    const { role, search, page = 1, limit = 20 } = req.query
-
-    const query = {}
-
-    // Filter by role if specified
-    if (role) {
-      query.role = role
-    }
-
-    // Search by name or email
-    if (search) {
-      query.$or = [{ name: { $regex: search, $options: "i" } }, { email: { $regex: search, $options: "i" } }]
-    }
-
-    const users = await User.find(query)
-      .select("-password")
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .exec()
-
-    const total = await User.countDocuments(query)
-
-    res.json({
-      success: true,
-      users,
-      pagination: {
-        page: Number.parseInt(page),
-        limit: Number.parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    })
-  } catch (error) {
-    console.error("Error fetching users:", error)
-    res.status(500).json({
-      success: false,
-      message: "Error fetching users",
       error: error.message,
     })
   }
@@ -211,7 +216,7 @@ router.get("/:userId", auth, async (req, res) => {
 // Delete user account (soft delete)
 router.delete("/account", auth, async (req, res) => {
   try {
-    const userId = req.user.id
+    const userId = req.user.userId
     const { password } = req.body
 
     if (!password) {
@@ -224,7 +229,7 @@ router.delete("/account", auth, async (req, res) => {
     const user = await User.findById(userId)
 
     // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password)
+    const isPasswordValid = await user.comparePassword(password)
 
     if (!isPasswordValid) {
       return res.status(400).json({
@@ -257,18 +262,18 @@ router.delete("/account", auth, async (req, res) => {
 // Get user statistics
 router.get("/stats/overview", auth, async (req, res) => {
   try {
-    const userId = req.user.id
+    const userId = req.user.userId
 
     // Get user's task and exam statistics
     const Task = require("../models/Task")
-    const Exam = require("../models/Exam")
+    const { Exam } = require("../models/Exam")
 
     const [totalTasks, completedTasks, pendingTasks, totalExams, passedExams] = await Promise.all([
-      Task.countDocuments({ userId }),
-      Task.countDocuments({ userId, status: "COMPLETED" }),
-      Task.countDocuments({ userId, status: { $in: ["PENDING", "IN_PROGRESS"] } }),
-      Exam.countDocuments({ userId }),
-      Exam.countDocuments({ userId, status: "PASSED" }),
+      Task.countDocuments({ assignedTo: userId }),
+      Task.countDocuments({ assignedTo: userId, status: "COMPLETED" }),
+      Task.countDocuments({ assignedTo: userId, status: { $in: ["ASSIGNED", "IN_PROGRESS"] } }),
+      Exam.countDocuments({ assignedTo: userId }),
+      Exam.countDocuments({ assignedTo: userId, status: "PASSED" }),
     ])
 
     const stats = {

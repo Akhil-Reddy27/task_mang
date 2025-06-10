@@ -10,6 +10,7 @@ const CreateExam = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+  const [studentsLoading, setStudentsLoading] = useState(true)
   const [students, setStudents] = useState([])
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
@@ -47,11 +48,38 @@ const CreateExam = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await axios.get("/api/users?role=STUDENT")
-      setStudents(response.data.users || [])
+      setStudentsLoading(true)
+      console.log("Fetching students...")
+      
+      const response = await axios.get("/api/users", {
+        params: { role: "STUDENT" },
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      
+      console.log("Students response:", response.data)
+      
+      if (response.data.success) {
+        setStudents(response.data.users || [])
+        console.log(`Loaded ${response.data.users?.length || 0} students`)
+      } else {
+        console.error("Failed to fetch students:", response.data.message)
+        toast.error("Failed to load students")
+      }
     } catch (error) {
       console.error("Error fetching students:", error)
-      toast.error("Failed to load students")
+      
+      if (error.response?.status === 401) {
+        toast.error("Authentication failed. Please login again.")
+        // Optionally redirect to login
+      } else if (error.response?.status === 500) {
+        toast.error("Server error. Please try again later.")
+      } else {
+        toast.error("Failed to load students. Please check your connection.")
+      }
+    } finally {
+      setStudentsLoading(false)
     }
   }
 
@@ -494,20 +522,35 @@ const CreateExam = () => {
                       <i className="bi bi-people me-2"></i>
                       Assign to Students
                     </h5>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-light"
-                      onClick={handleSelectAll}
-                    >
-                      {formData.assignedTo.length === students.length ? "Deselect All" : "Select All"}
-                    </button>
+                    {!studentsLoading && students.length > 0 && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-light"
+                        onClick={handleSelectAll}
+                      >
+                        {formData.assignedTo.length === students.length ? "Deselect All" : "Select All"}
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="card-body" style={{ maxHeight: "400px", overflowY: "auto" }}>
-                  {students.length === 0 ? (
+                  {studentsLoading ? (
+                    <div className="text-center text-muted py-4">
+                      <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                      Loading students...
+                    </div>
+                  ) : students.length === 0 ? (
                     <div className="text-center text-muted py-4">
                       <i className="bi bi-person-x fs-1 mb-2"></i>
                       <p>No students found</p>
+                      <button 
+                        type="button" 
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={fetchStudents}
+                      >
+                        <i className="bi bi-arrow-clockwise me-1"></i>
+                        Retry
+                      </button>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -836,7 +879,7 @@ const CreateExam = () => {
                   >
                     {loading ? (
                       <>
-                        <span className="spinner-border spinner-border-sm me-2\" role="status"></span>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
                         Creating...
                       </>
                     ) : (
