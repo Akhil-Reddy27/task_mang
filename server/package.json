@@ -1,0 +1,26 @@
+{
+  "name": "taskmang-server",
+  "version": "1.0.0",
+  "description": "EduTask Manager Backend Server",
+  "main": "index.js",
+  "scripts": {
+    "start": "node start-server.js",
+    "dev": "nodemon start-server.js",
+    "old": "node index.js",
+    "test": "node -e \"console.log('Server test - Environment check:'); console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'Set' : 'Missing'); console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'Missing');\""
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.5.0",
+    "multer": "^1.4.5-lts.1",
+    "react-hot-toast": "^2.5.2",
+    "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
