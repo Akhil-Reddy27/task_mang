@@ -290,7 +290,7 @@ const Chat = () => {
               <div className="conversations-list" style={{ height: "calc(70vh - 60px)", overflowY: "auto" }}>
                 {loading && !activeConversation ? (
                   <div className="d-flex justify-content-center align-items-center p-5">
-                    <div className="spinner-border text-primary" role="status">
+                    <div className="spinner-border text-primary\" role="status">
                       <span className="visually-hidden">Loading...</span>
                     </div>
                   </div>
@@ -420,7 +420,7 @@ const Chat = () => {
                   >
                     {loading ? (
                       <div className="d-flex justify-content-center align-items-center h-100">
-                        <div className="spinner-border text-primary" role="status">
+                        <div className="spinner-border text-primary\" role="status">
                           <span className="visually-hidden">Loading...</span>
                         </div>
                       </div>
