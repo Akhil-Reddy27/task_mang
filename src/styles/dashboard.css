@@ -975,7 +975,6 @@ body.theme-dark .calendar-day {
 
 .calendar-day:hover {
   background: rgba(99, 102, 241, 0.05);
-  transform: scale(1.02);
 }
 
 body.theme-dark .calendar-day:hover {
@@ -1349,10 +1348,6 @@ body.theme-dark .form-group label {
   .modal-content {
     width: 95%;
     margin: 1rem;
-  }
-
-  .exam-modal {
-    width: 98%;
   }
 
   .result-stats {

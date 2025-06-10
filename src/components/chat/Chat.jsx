@@ -182,7 +182,7 @@ const Chat = () => {
               lastMessage: newMessage,
               timestamp: new Date(),
             }
-          : conv,
+          : conv
       ),
     )
   }
