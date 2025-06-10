@@ -44,6 +44,32 @@ const CreateExam = () => {
 
   useEffect(() => {
     fetchStudents()
+    
+    // Set default dates - FIXED: Proper timezone handling
+    const now = new Date()
+    const tomorrow = new Date(now)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow.setHours(9, 0, 0, 0) // 9 AM tomorrow
+    
+    const dayAfterTomorrow = new Date(tomorrow)
+    dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1)
+    dayAfterTomorrow.setHours(17, 0, 0, 0) // 5 PM day after tomorrow
+    
+    // Format dates for datetime-local input (YYYY-MM-DDTHH:MM)
+    const formatDateForInput = (date) => {
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const hours = String(date.getHours()).padStart(2, '0')
+      const minutes = String(date.getMinutes()).padStart(2, '0')
+      return `${year}-${month}-${day}T${hours}:${minutes}`
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      startDate: formatDateForInput(tomorrow),
+      endDate: formatDateForInput(dayAfterTomorrow)
+    }))
   }, [])
 
   const fetchStudents = async () => {
@@ -212,13 +238,25 @@ const CreateExam = () => {
         }
       }
 
-      // Check dates
+      // FIXED: Proper date validation with timezone handling
       const startDate = new Date(formData.startDate)
       const endDate = new Date(formData.endDate)
       const now = new Date()
 
-      if (startDate <= now) {
-        toast.error("Start date must be in the future")
+      console.log("Date validation:")
+      console.log("Start date:", startDate.toISOString())
+      console.log("End date:", endDate.toISOString())
+      console.log("Current time:", now.toISOString())
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        toast.error("Invalid date format")
+        return
+      }
+
+      // Allow exams to start within the next 5 minutes (for testing)
+      const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000)
+      if (startDate < fiveMinutesFromNow) {
+        toast.error("Start date must be at least 5 minutes in the future")
         return
       }
 
@@ -227,9 +265,11 @@ const CreateExam = () => {
         return
       }
 
-      // Prepare data for submission
+      // Prepare data for submission - FIXED: Ensure proper date format
       const examData = {
         ...formData,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
         questions: formData.questions.map(q => ({
           question: q.question,
           type: q.type,
@@ -241,10 +281,21 @@ const CreateExam = () => {
         }))
       }
 
-      const response = await axios.post("/api/exams", examData)
+      console.log("Submitting exam data:", {
+        ...examData,
+        questions: `${examData.questions.length} questions`
+      })
+
+      const response = await axios.post("/api/exams", examData, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      })
       
       if (response.data) {
         toast.success("Exam created successfully!")
+        console.log("Exam created:", response.data)
         navigate("/dashboard/exams")
       }
     } catch (error) {
@@ -275,12 +326,34 @@ const CreateExam = () => {
         toast.error("Please select at least one student")
         return
       }
+      
+      // Validate dates
+      const startDate = new Date(formData.startDate)
+      const endDate = new Date(formData.endDate)
+      const now = new Date()
+      
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        toast.error("Please enter valid dates")
+        return
+      }
+      
+      if (endDate <= startDate) {
+        toast.error("End date must be after start date")
+        return
+      }
     }
     setCurrentStep(prev => prev + 1)
   }
 
   const prevStep = () => {
     setCurrentStep(prev => prev - 1)
+  }
+
+  // Helper function to get minimum date for inputs
+  const getMinDateTime = () => {
+    const now = new Date()
+    const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000)
+    return fiveMinutesFromNow.toISOString().slice(0, 16)
   }
 
   return (
@@ -447,7 +520,7 @@ const CreateExam = () => {
                   <div className="row mb-3">
                     <div className="col-md-6">
                       <label htmlFor="startDate" className="form-label">
-                        Start Date <span className="text-danger">*</span>
+                        Start Date & Time <span className="text-danger">*</span>
                       </label>
                       <input
                         type="datetime-local"
@@ -456,13 +529,16 @@ const CreateExam = () => {
                         name="startDate"
                         value={formData.startDate}
                         onChange={handleChange}
-                        min={new Date().toISOString().slice(0, 16)}
+                        min={getMinDateTime()}
                         required
                       />
+                      <small className="form-text text-muted">
+                        Exam must start at least 5 minutes from now
+                      </small>
                     </div>
                     <div className="col-md-6">
                       <label htmlFor="endDate" className="form-label">
-                        End Date <span className="text-danger">*</span>
+                        End Date & Time <span className="text-danger">*</span>
                       </label>
                       <input
                         type="datetime-local"
@@ -471,11 +547,43 @@ const CreateExam = () => {
                         name="endDate"
                         value={formData.endDate}
                         onChange={handleChange}
-                        min={formData.startDate || new Date().toISOString().slice(0, 16)}
+                        min={formData.startDate || getMinDateTime()}
                         required
                       />
+                      <small className="form-text text-muted">
+                        Must be after start date
+                      </small>
                     </div>
                   </div>
+
+                  {/* Date Preview */}
+                  {formData.startDate && formData.endDate && (
+                    <div className="alert alert-info">
+                      <h6 className="alert-heading">
+                        <i className="bi bi-calendar-check me-2"></i>
+                        Exam Schedule Preview
+                      </h6>
+                      <div className="row">
+                        <div className="col-md-6">
+                          <strong>Start:</strong> {new Date(formData.startDate).toLocaleString()}
+                        </div>
+                        <div className="col-md-6">
+                          <strong>End:</strong> {new Date(formData.endDate).toLocaleString()}
+                        </div>
+                      </div>
+                      <hr />
+                      <div className="row">
+                        <div className="col-md-6">
+                          <strong>Duration:</strong> {formData.duration} minutes
+                        </div>
+                        <div className="col-md-6">
+                          <strong>Total Window:</strong> {
+                            Math.round((new Date(formData.endDate) - new Date(formData.startDate)) / (1000 * 60 * 60 * 24))
+                          } day(s)
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="mb-3">
                     <h6>Exam Settings</h6>
@@ -952,6 +1060,43 @@ const CreateExam = () => {
           margin: 0 20px;
           align-self: flex-start;
           margin-top: 20px;
+        }
+
+        .alert-info {
+          background-color: rgba(13, 202, 240, 0.1);
+          border-color: rgba(13, 202, 240, 0.2);
+          color: #0c63e4;
+        }
+
+        .form-text {
+          font-size: 0.875rem;
+          margin-top: 0.25rem;
+        }
+
+        .card-header {
+          font-weight: 600;
+        }
+
+        .form-check-input:checked {
+          background-color: #0d6efd;
+          border-color: #0d6efd;
+        }
+
+        .input-group-text {
+          background-color: #f8f9fa;
+          border-color: #dee2e6;
+        }
+
+        .border {
+          border-color: #dee2e6 !important;
+        }
+
+        .bg-success.bg-opacity-10 {
+          background-color: rgba(25, 135, 84, 0.1) !important;
+        }
+
+        .border-success {
+          border-color: #198754 !important;
         }
       `}</style>
     </div>

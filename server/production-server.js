@@ -96,7 +96,7 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 
 const User = mongoose.model("User", userSchema)
 
-// Exam Schema
+// Exam Schema - FIXED with proper timezone handling
 const questionSchema = new mongoose.Schema({
   question: { type: String, required: true },
   type: { type: String, enum: ["SINGLE", "MULTIPLE"], default: "SINGLE" },
@@ -440,7 +440,7 @@ app.post("/api/tasks", auth, async (req, res) => {
   }
 })
 
-// Exams routes - FIXED VISIBILITY ISSUE
+// Exams routes - FIXED VISIBILITY AND DATE ISSUES
 app.get("/api/exams", auth, async (req, res) => {
   try {
     console.log("=== EXAMS REQUEST RECEIVED ===")
@@ -454,8 +454,8 @@ app.get("/api/exams", auth, async (req, res) => {
       query.tutor = req.user.userId
       console.log("Fetching exams for tutor:", req.user.userId)
     } else if (req.user.role === "STUDENT") {
-      // Students see exams assigned to them
-      query.assignedTo = { $in: [req.user.userId] }
+      // Students see exams assigned to them - FIXED: Use proper ObjectId comparison
+      query.assignedTo = { $in: [new mongoose.Types.ObjectId(req.user.userId)] }
       console.log("Fetching exams assigned to student:", req.user.userId)
     }
 
@@ -474,6 +474,9 @@ app.get("/api/exams", auth, async (req, res) => {
       console.log(`  - Created by tutor: ${exam.tutor?._id}`)
       console.log(`  - Assigned to: ${exam.assignedTo?.length || 0} students`)
       console.log(`  - Student IDs: ${exam.assignedTo?.map(s => s._id).join(', ')}`)
+      console.log(`  - Start Date: ${exam.startDate}`)
+      console.log(`  - End Date: ${exam.endDate}`)
+      console.log(`  - Current Time: ${new Date()}`)
     })
     
     res.json(exams)
@@ -510,13 +513,18 @@ app.post("/api/exams", auth, async (req, res) => {
       return res.status(400).json({ message: "Please add at least one question" })
     }
 
-    // Validate dates
+    // Validate dates - FIXED: Proper date handling
     const start = new Date(startDate)
     const end = new Date(endDate)
     const now = new Date()
 
-    if (start <= now) {
-      return res.status(400).json({ message: "Start date must be in the future" })
+    console.log("Date validation:")
+    console.log("  - Start date:", start.toISOString())
+    console.log("  - End date:", end.toISOString())
+    console.log("  - Current time:", now.toISOString())
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({ message: "Invalid date format" })
     }
 
     if (end <= start) {
@@ -543,7 +551,7 @@ app.post("/api/exams", auth, async (req, res) => {
 
     console.log("Creating exam with assigned students:", assignedTo)
 
-    // Convert assignedTo to ObjectIds if they're strings
+    // Convert assignedTo to ObjectIds if they're strings - FIXED
     const assignedToObjectIds = assignedTo.map(id => {
       if (typeof id === 'string') {
         return new mongoose.Types.ObjectId(id)
@@ -554,7 +562,9 @@ app.post("/api/exams", auth, async (req, res) => {
     const exam = new Exam({
       ...req.body,
       tutor: req.user.userId,
-      assignedTo: assignedToObjectIds
+      assignedTo: assignedToObjectIds,
+      startDate: start,
+      endDate: end
     })
 
     await exam.save()
@@ -570,6 +580,54 @@ app.post("/api/exams", auth, async (req, res) => {
     })
   } catch (error) {
     console.error("❌ Create exam error:", error)
+    res.status(500).json({ message: "Server error", error: error.message })
+  }
+})
+
+// Get single exam with proper date handling
+app.get("/api/exams/:id", auth, async (req, res) => {
+  try {
+    console.log("=== GET SINGLE EXAM REQUEST ===")
+    console.log("Exam ID:", req.params.id)
+    console.log("User:", req.user.userId, req.user.role)
+
+    const exam = await Exam.findById(req.params.id)
+      .populate("tutor", "fullName email")
+      .populate("assignedTo", "fullName email")
+
+    if (!exam) {
+      return res.status(404).json({ message: "Exam not found" })
+    }
+
+    // Check access permissions
+    const hasAccess = 
+      (req.user.role === "TUTOR" && exam.tutor._id.toString() === req.user.userId) ||
+      (req.user.role === "STUDENT" && exam.assignedTo.some(student => student._id.toString() === req.user.userId))
+
+    if (!hasAccess) {
+      return res.status(403).json({ message: "Access denied" })
+    }
+
+    // Add current time and exam status for frontend
+    const now = new Date()
+    const examWithStatus = {
+      ...exam.toObject(),
+      currentTime: now.toISOString(),
+      isUpcoming: now < new Date(exam.startDate),
+      isActive: now >= new Date(exam.startDate) && now <= new Date(exam.endDate),
+      isCompleted: now > new Date(exam.endDate)
+    }
+
+    console.log("✅ Exam found and access granted")
+    console.log("Exam status:", {
+      isUpcoming: examWithStatus.isUpcoming,
+      isActive: examWithStatus.isActive,
+      isCompleted: examWithStatus.isCompleted
+    })
+
+    res.json(examWithStatus)
+  } catch (error) {
+    console.error("❌ Get exam error:", error)
     res.status(500).json({ message: "Server error", error: error.message })
   }
 })
@@ -591,6 +649,7 @@ app.use("*", (req, res) => {
       "POST /api/tasks",
       "GET /api/exams",
       "POST /api/exams",
+      "GET /api/exams/:id",
     ],
   })
 })

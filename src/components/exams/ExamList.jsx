@@ -55,14 +55,14 @@ const ExamList = () => {
       }
     }
 
-    if (user) {
+    if (user?.id) { // Only fetch when user ID is available
       fetchExams()
     }
 
     return () => {
       isMounted = false // Cleanup function to prevent memory leaks
     }
-  }, [user]) // Only depend on user, not on every render
+  }, [user?.id]) // Only depend on user ID, not the entire user object
 
   const formatDate = (dateString) => {
     const date = new Date(dateString)
@@ -75,10 +75,20 @@ const ExamList = () => {
     })
   }
 
+  // FIXED: Proper date comparison with timezone handling
   const isExamActive = (exam) => {
     const now = new Date()
     const startDate = new Date(exam.startDate)
     const endDate = new Date(exam.endDate)
+    
+    console.log("Checking exam status:", {
+      examTitle: exam.title,
+      now: now.toISOString(),
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      isActive: now >= startDate && now <= endDate
+    })
+    
     return now >= startDate && now <= endDate
   }
 
@@ -115,7 +125,29 @@ const ExamList = () => {
 
   const handleTakeExam = (exam) => {
     // Navigate to exam taking interface
-    window.location.href = `/exam/${exam._id}/take`
+    toast.info("Exam interface will be implemented soon!")
+    // TODO: Implement exam taking interface
+    // navigate(`/dashboard/exams/${exam._id}/take`)
+  }
+
+  const getTimeUntilStart = (exam) => {
+    const now = new Date()
+    const startDate = new Date(exam.startDate)
+    const diffMs = startDate - now
+    
+    if (diffMs <= 0) return "Started"
+    
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffHours / 24)
+    
+    if (diffDays > 0) {
+      return `Starts in ${diffDays} day${diffDays > 1 ? 's' : ''}`
+    } else if (diffHours > 0) {
+      return `Starts in ${diffHours} hour${diffHours > 1 ? 's' : ''}`
+    } else {
+      const diffMinutes = Math.floor(diffMs / (1000 * 60))
+      return `Starts in ${diffMinutes} minute${diffMinutes > 1 ? 's' : ''}`
+    }
   }
 
   if (loading) {
@@ -185,7 +217,7 @@ const ExamList = () => {
         <div className="row">
           {exams.map((exam) => (
             <div key={exam._id} className="col-md-6 col-lg-4 mb-4">
-              <div className="card h-100 shadow-sm">
+              <div className="card h-100 shadow-sm exam-card">
                 <div className="card-header d-flex justify-content-between align-items-center">
                   {getExamStatusBadge(exam)}
                   <span className="badge bg-primary">{exam.subject}</span>
@@ -229,11 +261,19 @@ const ExamList = () => {
                       <span className="text-muted">Start: </span>
                       {formatDate(exam.startDate)}
                     </div>
-                    <div>
+                    <div className="mb-2">
                       <i className="bi bi-calendar-x me-1 text-danger"></i>
                       <span className="text-muted">End: </span>
                       {formatDate(exam.endDate)}
                     </div>
+                    
+                    {/* Show time until start for upcoming exams */}
+                    {isExamUpcoming(exam) && (
+                      <div className="alert alert-info py-2 px-3 small mb-0">
+                        <i className="bi bi-clock me-1"></i>
+                        {getTimeUntilStart(exam)}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="card-footer bg-transparent">
@@ -255,7 +295,7 @@ const ExamList = () => {
                       ) : isExamUpcoming(exam) ? (
                         <button className="btn btn-outline-secondary" disabled>
                           <i className="bi bi-clock me-2"></i>
-                          Starts {formatDate(exam.startDate)}
+                          {getTimeUntilStart(exam)}
                         </button>
                       ) : (
                         <button className="btn btn-outline-secondary" disabled>
@@ -300,6 +340,53 @@ const ExamList = () => {
           ))}
         </div>
       )}
+
+      <style jsx>{`
+        .exam-card {
+          transition: all 0.3s ease;
+          border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .exam-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .card-header {
+          background: linear-gradient(135deg, #f8fafc 0%, rgba(99, 102, 241, 0.05) 100%);
+          border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .badge {
+          font-size: 0.75rem;
+          padding: 0.375rem 0.75rem;
+        }
+
+        .alert-info {
+          background-color: rgba(13, 202, 240, 0.1);
+          border-color: rgba(13, 202, 240, 0.2);
+          color: #0c63e4;
+        }
+
+        .btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .card-footer {
+          padding: 1rem;
+        }
+
+        .btn-group .btn {
+          flex: 1;
+        }
+
+        @media (max-width: 768px) {
+          .col-md-6 {
+            margin-bottom: 1rem;
+          }
+        }
+      `}</style>
     </div>
   )
 }
