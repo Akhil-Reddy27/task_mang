@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Routes, Route, Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { useTheme } from "../contexts/ThemeContext"
@@ -18,6 +18,8 @@ import Profile from "./profile/Profile"
 import StudentsManagement from "./students/StudentsManagement"
 import Analytics from "./analytics/Analytics"
 import Notifications from "./notifications/Notifications"
+import axios from "axios"
+import toast from "react-hot-toast"
 import "../styles/dashboard.css"
 
 const Dashboard = () => {
@@ -27,6 +29,162 @@ const Dashboard = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showAccountDropdown, setShowAccountDropdown] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [showHelpModal, setShowHelpModal] = useState(false)
+  const searchInputRef = useRef(null)
+
+  // Search functionality
+  const performSearch = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([])
+      return
+    }
+
+    setSearchLoading(true)
+    try {
+      // Search across multiple endpoints
+      const [tasksResponse, examsResponse, usersResponse] = await Promise.all([
+        axios.get("/api/tasks").catch(() => ({ data: [] })),
+        axios.get("/api/exams").catch(() => ({ data: [] })),
+        axios.get("/api/users").catch(() => ({ data: { users: [] } }))
+      ])
+
+      const tasks = tasksResponse.data || []
+      const exams = examsResponse.data || []
+      const users = usersResponse.data?.users || []
+
+      const results = []
+
+      // Search tasks
+      tasks.forEach(task => {
+        if (task.title?.toLowerCase().includes(query.toLowerCase()) ||
+            task.subject?.toLowerCase().includes(query.toLowerCase()) ||
+            task.description?.toLowerCase().includes(query.toLowerCase())) {
+          results.push({
+            id: task._id,
+            type: 'task',
+            title: task.title,
+            subtitle: task.subject,
+            description: task.description,
+            link: '/dashboard/tasks',
+            icon: 'bi-list-task',
+            color: 'primary'
+          })
+        }
+      })
+
+      // Search exams
+      exams.forEach(exam => {
+        if (exam.title?.toLowerCase().includes(query.toLowerCase()) ||
+            exam.subject?.toLowerCase().includes(query.toLowerCase()) ||
+            exam.description?.toLowerCase().includes(query.toLowerCase())) {
+          results.push({
+            id: exam._id,
+            type: 'exam',
+            title: exam.title,
+            subtitle: exam.subject,
+            description: exam.description,
+            link: '/dashboard/exams',
+            icon: 'bi-clipboard-check',
+            color: 'success'
+          })
+        }
+      })
+
+      // Search users (if tutor)
+      if (user?.role === 'TUTOR') {
+        users.forEach(userItem => {
+          if (userItem.fullName?.toLowerCase().includes(query.toLowerCase()) ||
+              userItem.email?.toLowerCase().includes(query.toLowerCase())) {
+            results.push({
+              id: userItem._id,
+              type: 'user',
+              title: userItem.fullName,
+              subtitle: userItem.email,
+              description: `${userItem.role} at ${userItem.institution}`,
+              link: '/dashboard/students',
+              icon: 'bi-person',
+              color: 'info'
+            })
+          }
+        })
+      }
+
+      // Add navigation items
+      const navigationItems = [
+        { title: 'Tasks', link: '/dashboard/tasks', icon: 'bi-list-task', color: 'primary' },
+        { title: 'Exams', link: '/dashboard/exams', icon: 'bi-clipboard-check', color: 'success' },
+        { title: 'Calendar', link: '/dashboard/calendar', icon: 'bi-calendar', color: 'warning' },
+        { title: 'Messages', link: '/dashboard/chat', icon: 'bi-chat-dots', color: 'info' },
+        { title: 'Profile', link: '/dashboard/profile', icon: 'bi-person', color: 'secondary' },
+        { title: 'Notifications', link: '/dashboard/notifications', icon: 'bi-bell', color: 'danger' },
+        ...(user?.role === 'TUTOR' ? [
+          { title: 'Students', link: '/dashboard/students', icon: 'bi-people', color: 'info' },
+          { title: 'Analytics', link: '/dashboard/analytics', icon: 'bi-graph-up', color: 'warning' }
+        ] : [])
+      ]
+
+      navigationItems.forEach(item => {
+        if (item.title.toLowerCase().includes(query.toLowerCase())) {
+          results.push({
+            id: `nav-${item.title}`,
+            type: 'navigation',
+            title: item.title,
+            subtitle: 'Navigation',
+            description: `Go to ${item.title}`,
+            link: item.link,
+            icon: item.icon,
+            color: item.color
+          })
+        }
+      })
+
+      setSearchResults(results.slice(0, 8)) // Limit to 8 results
+    } catch (error) {
+      console.error('Search error:', error)
+      toast.error('Search failed')
+    } finally {
+      setSearchLoading(false)
+    }
+  }
+
+  // Debounced search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery) {
+        performSearch(searchQuery)
+      } else {
+        setSearchResults([])
+      }
+    }, 300)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Cmd/Ctrl + K for search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setShowSearch(true)
+        setTimeout(() => searchInputRef.current?.focus(), 100)
+      }
+      
+      // Escape to close search
+      if (e.key === 'Escape') {
+        setShowSearch(false)
+        setSearchQuery("")
+        setSearchResults([])
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const handleLogout = () => {
     logout()
@@ -46,6 +204,22 @@ const Dashboard = () => {
   const handleNotificationsClick = () => {
     setShowAccountDropdown(false)
     navigate("/dashboard/notifications")
+  }
+
+  const handleHelpClick = () => {
+    setShowAccountDropdown(false)
+    setShowHelpModal(true)
+  }
+
+  const handleSearchResultClick = (result) => {
+    setShowSearch(false)
+    setSearchQuery("")
+    setSearchResults([])
+    navigate(result.link)
+  }
+
+  const handleSearchFocus = () => {
+    setShowSearch(true)
   }
 
   if (!user) {
@@ -95,9 +269,13 @@ const Dashboard = () => {
                     <div className="search-input-wrapper">
                       <i className="bi bi-search search-icon"></i>
                       <input 
+                        ref={searchInputRef}
                         type="text" 
                         className="search-input" 
                         placeholder="Search tasks, exams, subjects..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onFocus={handleSearchFocus}
                       />
                       <div className="search-shortcut">⌘K</div>
                     </div>
@@ -205,7 +383,7 @@ const Dashboard = () => {
                             <span>Notifications</span>
                             <span className="notification-count">3</span>
                           </button>
-                          <button className="dropdown-item">
+                          <button className="dropdown-item" onClick={handleHelpClick}>
                             <i className="bi bi-question-circle me-3"></i>
                             <span>Help & Support</span>
                           </button>
@@ -247,6 +425,219 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Search Modal */}
+      {showSearch && (
+        <div className="search-modal-overlay" onClick={() => setShowSearch(false)}>
+          <div className="search-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="search-modal-header">
+              <div className="search-modal-input-wrapper">
+                <i className="bi bi-search"></i>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search anything..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-modal-input"
+                  autoFocus
+                />
+                <button 
+                  className="search-close-btn"
+                  onClick={() => setShowSearch(false)}
+                >
+                  <i className="bi bi-x"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div className="search-modal-body">
+              {searchLoading ? (
+                <div className="search-loading">
+                  <div className="spinner-border spinner-border-sm me-2"></div>
+                  Searching...
+                </div>
+              ) : searchResults.length > 0 ? (
+                <div className="search-results">
+                  {searchResults.map((result) => (
+                    <button
+                      key={result.id}
+                      className="search-result-item"
+                      onClick={() => handleSearchResultClick(result)}
+                    >
+                      <div className={`search-result-icon bg-${result.color}`}>
+                        <i className={result.icon}></i>
+                      </div>
+                      <div className="search-result-content">
+                        <div className="search-result-title">{result.title}</div>
+                        <div className="search-result-subtitle">{result.subtitle}</div>
+                        {result.description && (
+                          <div className="search-result-description">{result.description}</div>
+                        )}
+                      </div>
+                      <div className="search-result-type">
+                        {result.type}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : searchQuery ? (
+                <div className="search-no-results">
+                  <i className="bi bi-search fs-1 text-muted mb-2"></i>
+                  <p className="text-muted">No results found for "{searchQuery}"</p>
+                </div>
+              ) : (
+                <div className="search-suggestions">
+                  <div className="search-suggestion-title">Quick Actions</div>
+                  <div className="search-suggestion-items">
+                    <button className="search-suggestion-item" onClick={() => navigate('/dashboard/tasks')}>
+                      <i className="bi bi-list-task me-2"></i>
+                      View Tasks
+                    </button>
+                    <button className="search-suggestion-item" onClick={() => navigate('/dashboard/exams')}>
+                      <i className="bi bi-clipboard-check me-2"></i>
+                      View Exams
+                    </button>
+                    <button className="search-suggestion-item" onClick={() => navigate('/dashboard/calendar')}>
+                      <i className="bi bi-calendar me-2"></i>
+                      Open Calendar
+                    </button>
+                    <button className="search-suggestion-item" onClick={() => navigate('/dashboard/profile')}>
+                      <i className="bi bi-person me-2"></i>
+                      Edit Profile
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Help & Support Modal */}
+      {showHelpModal && (
+        <div className="modal show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="bi bi-question-circle me-2"></i>
+                  Help & Support
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close"
+                  onClick={() => setShowHelpModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="row">
+                  <div className="col-md-6 mb-4">
+                    <div className="help-section">
+                      <h6 className="help-section-title">
+                        <i className="bi bi-book me-2 text-primary"></i>
+                        Getting Started
+                      </h6>
+                      <ul className="help-list">
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); toast.info('Feature coming soon!'); }}>Quick Start Guide</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); toast.info('Feature coming soon!'); }}>User Manual</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); toast.info('Feature coming soon!'); }}>Video Tutorials</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); toast.info('Feature coming soon!'); }}>FAQ</a></li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="col-md-6 mb-4">
+                    <div className="help-section">
+                      <h6 className="help-section-title">
+                        <i className="bi bi-headset me-2 text-success"></i>
+                        Contact Support
+                      </h6>
+                      <ul className="help-list">
+                        <li><a href="mailto:support@edutask.com" onClick={() => toast.success('Opening email client...')}>Email Support</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); toast.info('Live chat coming soon!'); }}>Live Chat</a></li>
+                        <li><a href="tel:+1234567890" onClick={() => toast.success('Calling support...')}>Phone Support</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); toast.info('Feature coming soon!'); }}>Submit Ticket</a></li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="col-md-6 mb-4">
+                    <div className="help-section">
+                      <h6 className="help-section-title">
+                        <i className="bi bi-tools me-2 text-warning"></i>
+                        Troubleshooting
+                      </h6>
+                      <ul className="help-list">
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); toast.info('Feature coming soon!'); }}>Common Issues</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); toast.info('Feature coming soon!'); }}>Browser Compatibility</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); toast.info('Feature coming soon!'); }}>Performance Tips</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); toast.info('Feature coming soon!'); }}>Reset Settings</a></li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="col-md-6 mb-4">
+                    <div className="help-section">
+                      <h6 className="help-section-title">
+                        <i className="bi bi-info-circle me-2 text-info"></i>
+                        About
+                      </h6>
+                      <ul className="help-list">
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); toast.info('Version 1.0.0'); }}>Version Info</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); toast.info('Feature coming soon!'); }}>Release Notes</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); toast.info('Feature coming soon!'); }}>Privacy Policy</a></li>
+                        <li><a href="#" onClick={(e) => { e.preventDefault(); toast.info('Feature coming soon!'); }}>Terms of Service</a></li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="help-contact-card">
+                  <div className="row align-items-center">
+                    <div className="col-md-8">
+                      <h6 className="mb-1">Need immediate assistance?</h6>
+                      <p className="text-muted mb-0">Our support team is available 24/7 to help you.</p>
+                    </div>
+                    <div className="col-md-4 text-end">
+                      <button 
+                        className="btn btn-primary"
+                        onClick={() => {
+                          toast.success('Connecting to support...')
+                          setTimeout(() => setShowHelpModal(false), 1000)
+                        }}
+                      >
+                        <i className="bi bi-chat-dots me-2"></i>
+                        Start Chat
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => setShowHelpModal(false)}
+                >
+                  Close
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary"
+                  onClick={() => {
+                    window.open('mailto:support@edutask.com?subject=Support Request', '_blank')
+                    toast.success('Opening email client...')
+                  }}
+                >
+                  <i className="bi bi-envelope me-2"></i>
+                  Email Support
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Click outside to close dropdowns */}
       {(showAccountDropdown || showNotifications) && (
@@ -405,6 +796,7 @@ const Dashboard = () => {
           background: rgba(255, 255, 255, 0.8);
           font-size: 0.9rem;
           transition: all 0.3s ease;
+          cursor: pointer;
         }
 
         .search-input:focus {
@@ -412,6 +804,7 @@ const Dashboard = () => {
           border-color: #667eea;
           background: white;
           box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+          cursor: text;
         }
 
         body.theme-dark .search-input {
@@ -446,6 +839,258 @@ const Dashboard = () => {
         body.theme-dark .search-shortcut {
           background: rgba(255, 255, 255, 0.1);
           color: #9ca3af;
+        }
+
+        /* Search Modal */
+        .search-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(8px);
+          z-index: 9999;
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+          padding-top: 10vh;
+        }
+
+        .search-modal {
+          background: white;
+          border-radius: 16px;
+          box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+          width: 90%;
+          max-width: 600px;
+          max-height: 70vh;
+          overflow: hidden;
+          animation: searchModalSlide 0.3s ease;
+        }
+
+        body.theme-dark .search-modal {
+          background: #2d3748;
+        }
+
+        @keyframes searchModalSlide {
+          from {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .search-modal-header {
+          padding: 1.5rem;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        body.theme-dark .search-modal-header {
+          border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .search-modal-input-wrapper {
+          display: flex;
+          align-items: center;
+          position: relative;
+        }
+
+        .search-modal-input-wrapper i {
+          position: absolute;
+          left: 1rem;
+          color: #6b7280;
+          font-size: 1.2rem;
+        }
+
+        .search-modal-input {
+          width: 100%;
+          padding: 1rem 1rem 1rem 3rem;
+          border: none;
+          background: transparent;
+          font-size: 1.1rem;
+          color: #1f2937;
+        }
+
+        .search-modal-input:focus {
+          outline: none;
+        }
+
+        body.theme-dark .search-modal-input {
+          color: #f8fafc;
+        }
+
+        .search-close-btn {
+          position: absolute;
+          right: 1rem;
+          background: none;
+          border: none;
+          color: #6b7280;
+          font-size: 1.2rem;
+          cursor: pointer;
+          padding: 0.5rem;
+          border-radius: 8px;
+          transition: all 0.2s ease;
+        }
+
+        .search-close-btn:hover {
+          background: rgba(0, 0, 0, 0.1);
+          color: #374151;
+        }
+
+        body.theme-dark .search-close-btn:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: #f8fafc;
+        }
+
+        .search-modal-body {
+          max-height: 50vh;
+          overflow-y: auto;
+          padding: 1rem;
+        }
+
+        .search-loading {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+          color: #6b7280;
+        }
+
+        .search-results {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .search-result-item {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          padding: 1rem;
+          border: none;
+          background: transparent;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-align: left;
+          width: 100%;
+        }
+
+        .search-result-item:hover {
+          background: rgba(102, 126, 234, 0.1);
+        }
+
+        body.theme-dark .search-result-item:hover {
+          background: rgba(102, 126, 234, 0.2);
+        }
+
+        .search-result-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 1rem;
+          flex-shrink: 0;
+        }
+
+        .search-result-content {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .search-result-title {
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 0.25rem;
+        }
+
+        .search-result-subtitle {
+          font-size: 0.875rem;
+          color: #6b7280;
+          margin-bottom: 0.25rem;
+        }
+
+        .search-result-description {
+          font-size: 0.8rem;
+          color: #9ca3af;
+        }
+
+        body.theme-dark .search-result-title {
+          color: #f8fafc;
+        }
+
+        body.theme-dark .search-result-subtitle {
+          color: #9ca3af;
+        }
+
+        body.theme-dark .search-result-description {
+          color: #6b7280;
+        }
+
+        .search-result-type {
+          font-size: 0.75rem;
+          color: #9ca3af;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          font-weight: 500;
+        }
+
+        .search-no-results {
+          text-align: center;
+          padding: 3rem 1rem;
+        }
+
+        .search-suggestions {
+          padding: 1rem 0;
+        }
+
+        .search-suggestion-title {
+          font-weight: 600;
+          color: #6b7280;
+          margin-bottom: 1rem;
+          font-size: 0.875rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        .search-suggestion-items {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .search-suggestion-item {
+          display: flex;
+          align-items: center;
+          padding: 0.75rem 1rem;
+          border: none;
+          background: transparent;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-align: left;
+          width: 100%;
+          color: #374151;
+        }
+
+        .search-suggestion-item:hover {
+          background: rgba(102, 126, 234, 0.1);
+          color: #667eea;
+        }
+
+        body.theme-dark .search-suggestion-item {
+          color: #f8fafc;
+        }
+
+        body.theme-dark .search-suggestion-item:hover {
+          background: rgba(102, 126, 234, 0.2);
+          color: #667eea;
         }
 
         /* Action Buttons */
@@ -738,6 +1383,60 @@ const Dashboard = () => {
           color: #9ca3af;
         }
 
+        /* Help Modal Styles */
+        .help-section {
+          background: #f8fafc;
+          border-radius: 12px;
+          padding: 1.5rem;
+          height: 100%;
+        }
+
+        body.theme-dark .help-section {
+          background: #374151;
+        }
+
+        .help-section-title {
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 1rem;
+          display: flex;
+          align-items: center;
+        }
+
+        body.theme-dark .help-section-title {
+          color: #f8fafc;
+        }
+
+        .help-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+
+        .help-list li {
+          margin-bottom: 0.75rem;
+        }
+
+        .help-list a {
+          color: #667eea;
+          text-decoration: none;
+          font-weight: 500;
+          transition: all 0.2s ease;
+        }
+
+        .help-list a:hover {
+          color: #4f46e5;
+          text-decoration: underline;
+        }
+
+        .help-contact-card {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 12px;
+          padding: 1.5rem;
+          color: white;
+          margin-top: 1.5rem;
+        }
+
         /* Overlay */
         .dropdown-overlay {
           position: fixed;
@@ -766,6 +1465,11 @@ const Dashboard = () => {
             flex-direction: column;
             align-items: flex-start;
             gap: 0.5rem;
+          }
+
+          .search-modal {
+            width: 95%;
+            margin: 1rem;
           }
         }
 
