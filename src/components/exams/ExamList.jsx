@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import axios from "axios"
 import { useAuth } from "../../contexts/AuthContext"
+import toast from "react-hot-toast"
 
 const ExamList = () => {
   const [exams, setExams] = useState([])
@@ -15,19 +16,40 @@ const ExamList = () => {
     const fetchExams = async () => {
       try {
         setLoading(true)
-        const response = await axios.get("/api/exams")
-        setExams(response.data)
+        console.log("Fetching exams for user:", user?.role, user?.id)
+        
+        const response = await axios.get("/api/exams", {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        console.log("Exams response:", response.data)
+        setExams(response.data || [])
         setError(null)
       } catch (err) {
         console.error("Error fetching exams:", err)
-        setError("Failed to load exams. Please try again later.")
+        
+        if (err.response?.status === 401) {
+          setError("Authentication failed. Please login again.")
+          toast.error("Please login again")
+        } else if (err.response?.status === 404) {
+          setError("Exams endpoint not found. Please check server configuration.")
+        } else {
+          setError("Failed to load exams. Please try again later.")
+        }
+        
+        setExams([])
       } finally {
         setLoading(false)
       }
     }
 
-    fetchExams()
-  }, [])
+    if (user) {
+      fetchExams()
+    }
+  }, [user])
 
   const formatDate = (dateString) => {
     const date = new Date(dateString)
@@ -47,18 +69,35 @@ const ExamList = () => {
     return now >= startDate && now <= endDate
   }
 
-  const getExamStatusBadge = (exam) => {
+  const isExamUpcoming = (exam) => {
     const now = new Date()
     const startDate = new Date(exam.startDate)
-    const endDate = new Date(exam.endDate)
+    return now < startDate
+  }
 
-    if (now < startDate) {
+  const isExamCompleted = (exam) => {
+    const now = new Date()
+    const endDate = new Date(exam.endDate)
+    return now > endDate
+  }
+
+  const getExamStatusBadge = (exam) => {
+    if (isExamUpcoming(exam)) {
       return <span className="badge bg-info">Upcoming</span>
-    } else if (now >= startDate && now <= endDate) {
+    } else if (isExamActive(exam)) {
       return <span className="badge bg-success">Active</span>
-    } else {
+    } else if (isExamCompleted(exam)) {
       return <span className="badge bg-secondary">Completed</span>
     }
+    return <span className="badge bg-light text-dark">Unknown</span>
+  }
+
+  const canTakeExam = (exam) => {
+    return user?.role === "STUDENT" && isExamActive(exam)
+  }
+
+  const canViewResults = (exam) => {
+    return user?.role === "STUDENT" && isExamCompleted(exam)
   }
 
   if (loading) {
@@ -73,9 +112,20 @@ const ExamList = () => {
 
   if (error) {
     return (
-      <div className="alert alert-danger m-3" role="alert">
-        <i className="bi bi-exclamation-triangle me-2"></i>
-        {error}
+      <div className="container-fluid py-3">
+        <div className="alert alert-danger" role="alert">
+          <i className="bi bi-exclamation-triangle me-2"></i>
+          {error}
+          <div className="mt-2">
+            <button 
+              className="btn btn-outline-danger btn-sm"
+              onClick={() => window.location.reload()}
+            >
+              <i className="bi bi-arrow-clockwise me-1"></i>
+              Retry
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
@@ -145,6 +195,14 @@ const ExamList = () => {
                       </span>
                       <span className="fw-semibold">{exam.passingScore}%</span>
                     </div>
+                    {user?.role === "TUTOR" && (
+                      <div className="d-flex justify-content-between small mb-1">
+                        <span className="text-muted">
+                          <i className="bi bi-people me-1"></i>Assigned:
+                        </span>
+                        <span className="fw-semibold">{exam.assignedTo?.length || 0} students</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="small">
@@ -163,32 +221,54 @@ const ExamList = () => {
                 <div className="card-footer bg-transparent">
                   {user?.role === "STUDENT" ? (
                     <div className="d-grid">
-                      {isExamActive(exam) ? (
-                        <Link to={`/dashboard/exams/${exam._id}/take`} className="btn btn-primary">
+                      {canTakeExam(exam) ? (
+                        <button className="btn btn-primary">
                           <i className="bi bi-pencil-square me-2"></i>
                           Take Exam
-                        </Link>
-                      ) : new Date() > new Date(exam.endDate) ? (
-                        <Link to={`/dashboard/exams/${exam._id}/results`} className="btn btn-outline-secondary">
+                        </button>
+                      ) : canViewResults(exam) ? (
+                        <button className="btn btn-outline-secondary">
                           <i className="bi bi-eye me-2"></i>
                           View Results
-                        </Link>
-                      ) : (
+                        </button>
+                      ) : isExamUpcoming(exam) ? (
                         <button className="btn btn-outline-secondary" disabled>
                           <i className="bi bi-clock me-2"></i>
-                          Not Started Yet
+                          Starts {formatDate(exam.startDate)}
+                        </button>
+                      ) : (
+                        <button className="btn btn-outline-secondary" disabled>
+                          <i className="bi bi-check-circle me-2"></i>
+                          Exam Completed
                         </button>
                       )}
                     </div>
                   ) : (
                     <div className="d-flex gap-2">
-                      <Link to={`/dashboard/exams/${exam._id}/edit`} className="btn btn-outline-primary flex-grow-1">
+                      <Link 
+                        to={`/dashboard/exams/${exam._id}/edit`} 
+                        className="btn btn-outline-primary flex-grow-1"
+                        title="Edit Exam"
+                      >
                         <i className="bi bi-pencil"></i>
                       </Link>
-                      <Link to={`/dashboard/exams/${exam._id}/analytics`} className="btn btn-outline-info flex-grow-1">
+                      <Link 
+                        to={`/dashboard/exams/${exam._id}/analytics`} 
+                        className="btn btn-outline-info flex-grow-1"
+                        title="View Analytics"
+                      >
                         <i className="bi bi-bar-chart"></i>
                       </Link>
-                      <button className="btn btn-outline-danger flex-grow-1">
+                      <button 
+                        className="btn btn-outline-danger flex-grow-1"
+                        title="Delete Exam"
+                        onClick={() => {
+                          if (window.confirm('Are you sure you want to delete this exam?')) {
+                            // Handle delete
+                            toast.info('Delete functionality will be implemented')
+                          }
+                        }}
+                      >
                         <i className="bi bi-trash"></i>
                       </button>
                     </div>

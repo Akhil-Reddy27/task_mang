@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Routes, Route } from "react-router-dom"
+import { Routes, Route, Link } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import StudentDashboard from "./dashboard/StudentDashboard"
 import TutorDashboard from "./dashboard/TutorDashboard"
@@ -68,14 +68,19 @@ const Dashboard = () => {
                     </button>
                     <ul className="dropdown-menu">
                       <li>
-                        <a className="dropdown-item" href="/dashboard/profile">
+                        <Link className="dropdown-item" to="/dashboard/profile">
                           <i className="bi bi-person me-2"></i>My Profile
-                        </a>
+                        </Link>
                       </li>
                       <li>
-                        <a className="dropdown-item" href="#">
+                        <Link className="dropdown-item" to="/dashboard/profile">
                           <i className="bi bi-gear me-2"></i>Settings
-                        </a>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link className="dropdown-item" to="/dashboard/notifications">
+                          <i className="bi bi-bell me-2"></i>Notifications
+                        </Link>
                       </li>
                       <li>
                         <hr className="dropdown-divider" />
