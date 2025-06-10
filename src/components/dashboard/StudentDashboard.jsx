@@ -1,18 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Link } from "react-router-dom"
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,"use client"
-
-import { useState, useEffect } from "react"
 import { useAuth } from "../../contexts/AuthContext"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -27,6 +15,8 @@ import {
   PointElement,
 } from "chart.js"
 import { Doughnut, Line, Bar } from "react-chartjs-2"
+import axios from "axios"
+import toast from "react-hot-toast"
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement)
 
@@ -84,86 +74,110 @@ const StudentDashboard = () => {
     const fetchDashboardData = async () => {
       setLoading(true)
       try {
-        setTasks([
-          {
-            id: 1,
-            title: "Chemistry Lab Report",
-            subject: "Chemistry",
-            description: "Organic Chemistry Analysis - Benzene Reactions",
-            dueDate: "2025-06-12T23:59:00",
-            status: "pending",
-            priority: "high",
-            progress: 60,
-          },
-          {
-            id: 2,
-            title: "Mathematics Assignment",
-            subject: "Mathematics",
-            description: "Calculus Problems - Integration and Differentiation",
-            dueDate: "2025-06-09T23:59:00",
-            status: "completed",
-            priority: "medium",
-            progress: 100,
-            score: 92,
-          },
-          {
-            id: 3,
-            title: "Physics Problem Set",
-            subject: "Physics",
-            description: "Mechanics and Thermodynamics",
-            dueDate: "2025-06-15T23:59:00",
-            status: "in_progress",
-            priority: "medium",
-            progress: 30,
-          },
-          {
-            id: 4,
-            title: "English Literature Essay",
-            subject: "English",
-            description: "Analysis of Shakespeare's Hamlet",
-            dueDate: "2025-06-18T23:59:00",
-            status: "pending",
-            priority: "low",
-            progress: 0,
-          },
-        ])
+        // Attempt to fetch real data from API
+        try {
+          const tasksResponse = await axios.get("/api/tasks")
+          if (tasksResponse.data && Array.isArray(tasksResponse.data)) {
+            setTasks(tasksResponse.data)
+          }
+        } catch (error) {
+          console.log("Using mock task data")
+        }
 
-        setExams([
-          {
-            id: 1,
-            title: "Biology Final Exam",
-            subject: "Biology",
-            description: "Comprehensive final examination covering all topics",
-            date: "2025-06-18T09:00:00",
-            duration: 180,
-            status: "upcoming",
-            passingScore: 70,
-            questions: mockExamQuestions,
-          },
-          {
-            id: 2,
-            title: "Physics Mid-term",
-            subject: "Physics",
-            description: "Mechanics and Thermodynamics",
-            date: "2025-06-25T14:00:00",
-            duration: 120,
-            status: "upcoming",
-            passingScore: 75,
-            questions: mockExamQuestions,
-          },
-          {
-            id: 3,
-            title: "Mathematics Quiz",
-            subject: "Mathematics",
-            description: "Calculus and Algebra",
-            date: "2025-06-09T10:00:00",
-            duration: 60,
-            status: "completed",
-            score: 92,
-            passingScore: 70,
-            questions: mockExamQuestions,
-          },
-        ])
+        try {
+          const examsResponse = await axios.get("/api/exams")
+          if (examsResponse.data && Array.isArray(examsResponse.data)) {
+            setExams(examsResponse.data)
+          }
+        } catch (error) {
+          console.log("Using mock exam data")
+        }
+
+        // If API calls failed or returned empty data, use mock data
+        if (tasks.length === 0) {
+          setTasks([
+            {
+              id: 1,
+              title: "Chemistry Lab Report",
+              subject: "Chemistry",
+              description: "Organic Chemistry Analysis - Benzene Reactions",
+              dueDate: "2025-06-12T23:59:00",
+              status: "pending",
+              priority: "high",
+              progress: 60,
+            },
+            {
+              id: 2,
+              title: "Mathematics Assignment",
+              subject: "Mathematics",
+              description: "Calculus Problems - Integration and Differentiation",
+              dueDate: "2025-06-09T23:59:00",
+              status: "completed",
+              priority: "medium",
+              progress: 100,
+              score: 92,
+            },
+            {
+              id: 3,
+              title: "Physics Problem Set",
+              subject: "Physics",
+              description: "Mechanics and Thermodynamics",
+              dueDate: "2025-06-15T23:59:00",
+              status: "in_progress",
+              priority: "medium",
+              progress: 30,
+            },
+            {
+              id: 4,
+              title: "English Literature Essay",
+              subject: "English",
+              description: "Analysis of Shakespeare's Hamlet",
+              dueDate: "2025-06-18T23:59:00",
+              status: "pending",
+              priority: "low",
+              progress: 0,
+            },
+          ])
+        }
+
+        if (exams.length === 0) {
+          setExams([
+            {
+              id: 1,
+              title: "Biology Final Exam",
+              subject: "Biology",
+              description: "Comprehensive final examination covering all topics",
+              date: "2025-06-18T09:00:00",
+              duration: 180,
+              status: "upcoming",
+              passingScore: 70,
+              questions: mockExamQuestions,
+            },
+            {
+              id: 2,
+              title: "Physics Mid-term",
+              subject: "Physics",
+              description: "Mechanics and Thermodynamics",
+              date: "2025-06-25T14:00:00",
+              duration: 120,
+              status: "upcoming",
+              passingScore: 75,
+              questions: mockExamQuestions,
+            },
+            {
+              id: 3,
+              title: "Mathematics Quiz",
+              subject: "Mathematics",
+              description: "Calculus and Algebra",
+              date: "2025-06-09T10:00:00",
+              duration: 60,
+              status: "completed",
+              score: 92,
+              passingScore: 70,
+              questions: mockExamQuestions,
+            },
+          ])
+        }
 
         setRecentActivity([
           {
@@ -230,6 +244,7 @@ const StudentDashboard = () => {
         ])
       } catch (error) {
         console.error("Error fetching dashboard data:", error)
+        toast.error("Failed to load dashboard data")
       } finally {
         setLoading(false)
       }
@@ -271,12 +286,14 @@ const StudentDashboard = () => {
     }
     setTasks((prev) => [...prev, newTask])
     setShowTaskModal(false)
+    toast.success("Task added successfully!")
   }
 
   const handleAddEvent = (eventData) => {
     // Add event logic here
     console.log("Adding event:", eventData)
     setShowEventModal(false)
+    toast.success("Event added to calendar!")
   }
 
   const handleStartExam = (exam) => {
@@ -324,6 +341,7 @@ const StudentDashboard = () => {
     setShowExamModal(false)
     setSelectedResult({ ...selectedExam, score, correct, total: selectedExam.questions.length })
     setShowResultModal(true)
+    toast.success("Exam submitted successfully!")
   }
 
   const handleViewResult = (exam) => {
@@ -383,10 +401,12 @@ const StudentDashboard = () => {
 
   const handleTaskStatusChange = (taskId, newStatus) => {
     setTasks((prevTasks) => prevTasks.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task)))
+    toast.success(`Task marked as ${newStatus}`)
   }
 
   const handleTaskDelete = (taskId) => {
     setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId))
+    toast.success("Task deleted successfully")
   }
 
   // Chart data
@@ -929,14 +949,17 @@ const StudentDashboard = () => {
               {dayEvents.slice(0, 2).map((event, index) => (
                 <div
                   key={index}
-                  className={`event-dot ${event.type || (event.dueDate ? "task" : "exam")}`}
+                  className={`event-item ${event.type || (event.dueDate ? "task" : "exam")}`}
                   title={event.title}
-                ></div>
+                >
+                  <i className={`bi ${event.dueDate ? "bi-list-task" : "bi-clipboard-check"}`}></i>
+                  <span className="event-title">{event.title}</span>
+                </div>
               ))}
-              {dayEvents.length > 2 && <div className="event-more">+{dayEvents.length - 2}</div>}
+              {dayEvents.length > 2 && <div className="event-more">+{dayEvents.length - 2} more</div>}
             </div>
           )}
-        </motion.div>,
+        </motion.div>
       )
     }
 
@@ -955,7 +978,7 @@ const StudentDashboard = () => {
         </div>
         <div className="calendar-weekdays">
           {weekdays.map((day) => (
-            <div key={day} className="weekday">
+            <div key={day} className="weekday-header">
               {day}
             </div>
           ))}
@@ -1257,71 +1280,83 @@ const StudentDashboard = () => {
                 </div>
                 <div className="card-body">
                   <div className="tasks-grid">
-                    {tasks.map((task, index) => (
-                      <motion.div
-                        key={task.id}
-                        className="task-item"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        whileHover={{ scale: 1.02, y: -5 }}
-                      >
-                        <div className="task-header">
-                          <h6 className="task-title">{task.title}</h6>
-                          <div className="task-actions">
-                            <motion.button
-                              className="btn btn-sm btn-outline-primary"
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                            >
-                              <i className="bi bi-eye"></i>
-                            </motion.button>
-                            <motion.button
-                              className="btn btn-sm btn-outline-success"
-                              onClick={() => handleTaskStatusChange(task.id, "completed")}
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                            >
-                              <i className="bi bi-check"></i>
-                            </motion.button>
-                            <motion.button
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={() => handleTaskDelete(task.id)}
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                            >
-                              <i className="bi bi-trash"></i>
-                            </motion.button>
+                    {tasks.length === 0 ? (
+                      <div className="text-center p-5">
+                        <i className="bi bi-clipboard text-muted" style={{ fontSize: "3rem" }}></i>
+                        <h5 className="mt-3">No Tasks Found</h5>
+                        <p className="text-muted">You don't have any tasks yet.</p>
+                        <button className="btn btn-primary" onClick={() => setShowTaskModal(true)}>
+                          <i className="bi bi-plus-lg me-2"></i>
+                          Create Your First Task
+                        </button>
+                      </div>
+                    ) : (
+                      tasks.map((task, index) => (
+                        <motion.div
+                          key={task.id}
+                          className="task-item"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          whileHover={{ scale: 1.02, y: -5 }}
+                        >
+                          <div className="task-header">
+                            <h6 className="task-title">{task.title}</h6>
+                            <div className="task-actions">
+                              <motion.button
+                                className="btn btn-sm btn-outline-primary"
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                              >
+                                <i className="bi bi-eye"></i>
+                              </motion.button>
+                              <motion.button
+                                className="btn btn-sm btn-outline-success"
+                                onClick={() => handleTaskStatusChange(task.id, "completed")}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                              >
+                                <i className="bi bi-check"></i>
+                              </motion.button>
+                              <motion.button
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => handleTaskDelete(task.id)}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                              >
+                                <i className="bi bi-trash"></i>
+                              </motion.button>
+                            </div>
                           </div>
-                        </div>
-                        <p className="task-description">{task.description}</p>
-                        <div className="task-meta">
-                          <span className="badge bg-light text-dark">{task.subject}</span>
-                          <span className={`badge bg-${getStatusColor(task.status)}`}>
-                            {task.status.replace("_", " ").charAt(0).toUpperCase() + task.status.slice(1)}
-                          </span>
-                          <span className={`badge bg-${getPriorityColor(task.priority)}`}>
-                            {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                          </span>
-                        </div>
-                        <div className="task-progress">
-                          <div className="progress">
-                            <motion.div
-                              className="progress-bar"
-                              initial={{ width: 0 }}
-                              animate={{ width: `${task.progress}%` }}
-                              transition={{ duration: 1, delay: index * 0.1 }}
-                              role="progressbar"
-                            ></motion.div>
+                          <p className="task-description">{task.description}</p>
+                          <div className="task-meta">
+                            <span className="badge bg-light text-dark">{task.subject}</span>
+                            <span className={`badge bg-${getStatusColor(task.status)}`}>
+                              {task.status.replace("_", " ").charAt(0).toUpperCase() + task.status.slice(1)}
+                            </span>
+                            <span className={`badge bg-${getPriorityColor(task.priority)}`}>
+                              {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                            </span>
                           </div>
-                          <small className="text-muted">{task.progress}% complete</small>
-                        </div>
-                        <div className="task-footer">
-                          <small className="text-muted">Due: {formatDate(task.dueDate)}</small>
-                          {task.score && <span className="badge bg-primary">{task.score}%</span>}
-                        </div>
-                      </motion.div>
-                    ))}
+                          <div className="task-progress">
+                            <div className="progress">
+                              <motion.div
+                                className="progress-bar"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${task.progress}%` }}
+                                transition={{ duration: 1, delay: index * 0.1 }}
+                                role="progressbar"
+                              ></motion.div>
+                            </div>
+                            <small className="text-muted">{task.progress}% complete</small>
+                          </div>
+                          <div className="task-footer">
+                            <small className="text-muted">Due: {formatDate(task.dueDate)}</small>
+                            {task.score && <span className="badge bg-primary">{task.score}%</span>}
+                          </div>
+                        </motion.div>
+                      ))
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -1360,87 +1395,97 @@ const StudentDashboard = () => {
 
             <div className="col-12">
               <div className="row g-4">
-                {exams.map((exam, index) => (
-                  <div key={exam.id} className="col-lg-4 col-md-6">
-                    <motion.div
-                      className="exam-card"
-                      variants={cardVariants}
-                      initial="hidden"
-                      animate="visible"
-                      whileHover="hover"
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                    >
-                      <div className="exam-header">
-                        <div className="exam-status">
-                          <motion.span
-                            className={`badge ${
-                              exam.status === "completed"
-                                ? "bg-success"
-                                : exam.status === "upcoming"
-                                  ? "bg-warning"
-                                  : "bg-secondary"
-                            }`}
-                            animate={{ scale: [1, 1.1, 1] }}
-                            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                          >
-                            {exam.status.charAt(0).toUpperCase() + exam.status.slice(1)}
-                          </motion.span>
+                {exams.length === 0 ? (
+                  <div className="col-12">
+                    <div className="text-center p-5">
+                      <i className="bi bi-clipboard text-muted" style={{ fontSize: "3rem" }}></i>
+                      <h5 className="mt-3">No Exams Found</h5>
+                      <p className="text-muted">You don't have any exams yet.</p>
+                    </div>
+                  </div>
+                ) : (
+                  exams.map((exam, index) => (
+                    <div key={exam.id} className="col-lg-4 col-md-6">
+                      <motion.div
+                        className="exam-card"
+                        variants={cardVariants}
+                        initial="hidden"
+                        animate="visible"
+                        whileHover="hover"
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                      >
+                        <div className="exam-header">
+                          <div className="exam-status">
+                            <motion.span
+                              className={`badge ${
+                                exam.status === "completed"
+                                  ? "bg-success"
+                                  : exam.status === "upcoming"
+                                    ? "bg-warning"
+                                    : "bg-secondary"
+                              }`}
+                              animate={{ scale: [1, 1.1, 1] }}
+                              transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+                            >
+                              {exam.status.charAt(0).toUpperCase() + exam.status.slice(1)}
+                            </motion.span>
+                          </div>
+                          <div className="exam-subject">
+                            <span className="badge bg-primary">{exam.subject}</span>
+                          </div>
                         </div>
-                        <div className="exam-subject">
-                          <span className="badge bg-primary">{exam.subject}</span>
-                        </div>
-                      </div>
-                      <div className="exam-content">
-                        <h5 className="exam-title">{exam.title}</h5>
-                        <p className="exam-description">{exam.description}</p>
-                        <div className="exam-details">
-                          <motion.div className="detail-item" whileHover={{ x: 5 }}>
-                            <i className="bi bi-calendar-event"></i>
-                            <span>{formatDate(exam.date)}</span>
-                          </motion.div>
-                          <motion.div className="detail-item" whileHover={{ x: 5 }}>
-                            <i className="bi bi-clock"></i>
-                            <span>{exam.duration} minutes</span>
-                          </motion.div>
-                          {exam.score && (
+                        <div className="exam-content">
+                          <h5 className="exam-title">{exam.title}</h5>
+                          <p className="exam-description">{exam.description}</p>
+                          <div className="exam-details">
                             <motion.div className="detail-item" whileHover={{ x: 5 }}>
-                              <i className="bi bi-trophy"></i>
-                              <span>{exam.score}%</span>
+                              <i className="bi bi-calendar-event"></i>
+                              <span>{formatDate(exam.date)}</span>
                             </motion.div>
+                            <motion.div className="detail-item" whileHover={{ x: 5 }}>
+                              <i className="bi bi-clock"></i>
+                              <span>{exam.duration} minutes</span>
+                            </motion.div>
+                            {exam.score && (
+                              <motion.div className="detail-item" whileHover={{ x: 5 }}>
+                                <i className="bi bi-trophy"></i>
+                                <span>{exam.score}%</span>
+                              </motion.div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="exam-footer">
+                          {exam.status === "upcoming" ? (
+                            <motion.button
+                              className="btn btn-primary w-100"
+                              onClick={() => handleStartExam(exam)}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <i className="bi bi-pencil-square me-2"></i>
+                              Take Exam
+                            </motion.button>
+                          ) : exam.status === "completed" ? (
+                            <motion.button
+                              className="btn btn-outline-secondary w-100"
+                              onClick={() => handleViewResult(exam)}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <i className="bi bi-eye me-2"></i>
+                              View Results
+                            </motion.button>
+                          ) : (
+                            <button className="btn btn-outline-secondary w-100" disabled>
+                              <i className="bi bi-clock me-2"></i>
+                              Not Available
+                            </button>
                           )}
                         </div>
-                      </div>
-                      <div className="exam-footer">
-                        {exam.status === "upcoming" ? (
-                          <motion.button
-                            className="btn btn-primary w-100"
-                            onClick={() => handleStartExam(exam)}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <i className="bi bi-pencil-square me-2"></i>
-                            Take Exam
-                          </motion.button>
-                        ) : exam.status === "completed" ? (
-                          <motion.button
-                            className="btn btn-outline-secondary w-100"
-                            onClick={() => handleViewResult(exam)}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <i className="bi bi-eye me-2"></i>
-                            View Results
-                          </motion.button>
-                        ) : (
-                          <button className="btn btn-outline-secondary w-100" disabled>
-                            <i className="bi bi-clock me-2"></i>
-                            Not Available
-                          </button>
-                        )}
-                      </div>
-                    </motion.div>
-                  </div>
-                ))}
+                      </motion.div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </motion.div>
@@ -1661,373 +1706,414 @@ const StudentDashboard = () => {
       <EventModal />
       <ExamModal />
       <ResultModal />
-    </div>
-  )
-}
 
-export default StudentDashboard
+      {/* Styles for Exam Modal */}
+      <style jsx>{`
+        /* Exam Modal Styles */
+        .exam-overlay {
+          background: rgba(0, 0, 0, 0.8);
+        }
 
-  PointElement,
-} from "chart.js"
-import { Doughnut, Line } from "react-chartjs-2"
-import axios from "axios"
-import toast from "react-hot-toast"
+        .exam-modal {
+          max-width: 800px;
+          width: 95%;
+        }
 
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement)
+        .exam-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 1.5rem;
+          background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+          color: white;
+        }
 
-const StudentDashboard = () => {
-  const [stats, setStats] = useState({
-    totalTasks: 0,
-    completedTasks: 0,
-    pendingTasks: 0,
-    upcomingExams: 0,
-    averageScore: 0
-  })
-  const [recentActivity, setRecentActivity] = useState([])
-  const [upcomingDeadlines, setUpcomingDeadlines] = useState([])
-  const [loading, setLoading] = useState(true)
+        .exam-info h4 {
+          margin: 0;
+          font-weight: 700;
+        }
 
-  useEffect(() => {
-    fetchDashboardData()
-  }, [])
+        .exam-info p {
+          margin: 0;
+          opacity: 0.9;
+        }
 
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true)
-      
-      // Fetch real data from API
-      const [tasksResponse, examsResponse] = await Promise.all([
-        axios.get("/api/tasks").catch(() => ({ data: [] })),
-        axios.get("/api/exams").catch(() => ({ data: [] }))
-      ])
+        .exam-timer {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 1.2rem;
+          font-weight: 700;
+        }
 
-      const tasks = tasksResponse.data || []
-      const exams = examsResponse.data || []
+        .exam-progress {
+          padding: 1rem 1.5rem;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
 
-      // Calculate real stats
-      const completedTasks = tasks.filter(task => task.status === 'COMPLETED').length
-      const pendingTasks = tasks.filter(task => 
-        task.status === 'ASSIGNED' || task.status === 'IN_PROGRESS'
-      ).length
-      
-      const now = new Date()
-      const upcomingExams = exams.filter(exam => 
-        new Date(exam.startDate) > now
-      ).length
+        .exam-progress .progress {
+          height: 8px;
+          border-radius: 4px;
+          background: rgba(0, 0, 0, 0.1);
+          margin-bottom: 0.5rem;
+        }
 
-      setStats({
-        totalTasks: tasks.length,
-        completedTasks,
-        pendingTasks,
-        upcomingExams,
-        averageScore: 78 + Math.floor(Math.random() * 15) // Simulated for now
-      })
+        .exam-question {
+          padding: 2rem 1.5rem;
+        }
 
-      // Generate recent activity from real data
-      const activities = []
-      
-      tasks.slice(0, 3).forEach(task => {
-        activities.push({
-          id: `task-${task._id}`,
-          type: "task_assigned",
-          title: `New task assigned: ${task.title}`,
-          time: new Date(task.createdAt).toLocaleString(),
-          icon: "bi-list-task",
-          color: "primary"
-        })
-      })
+        .exam-question h5 {
+          margin-bottom: 1.5rem;
+          font-weight: 600;
+          color: var(--dark-color);
+        }
 
-      exams.slice(0, 2).forEach(exam => {
-        activities.push({
-          id: `exam-${exam._id}`,
-          type: "exam_scheduled", 
-          title: `Exam scheduled: ${exam.title}`,
-          time: new Date(exam.createdAt).toLocaleString(),
-          icon: "bi-clipboard-check",
-          color: "warning"
-        })
-      })
+        .options {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
 
-      setRecentActivity(activities.slice(0, 5))
+        .option {
+          display: flex;
+          align-items: center;
+          padding: 1rem;
+          border: 2px solid rgba(0, 0, 0, 0.1);
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
 
-      // Set upcoming deadlines
-      const deadlines = tasks
-        .filter(task => new Date(task.dueDate) > now)
-        .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
-        .slice(0, 5)
-        .map(task => ({
-          id: task._id,
-          title: task.title,
-          subject: task.subject,
-          dueDate: task.dueDate,
-          priority: task.priority,
-          type: 'task'
-        }))
+        .option:hover {
+          border-color: var(--primary-color);
+          background: rgba(99, 102, 241, 0.05);
+        }
 
-      const examDeadlines = exams
-        .filter(exam => new Date(exam.startDate) > now)
-        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
-        .slice(0, 3)
-        .map(exam => ({
-          id: exam._id,
-          title: exam.title,
-          subject: exam.subject,
-          dueDate: exam.startDate,
-          priority: 'HIGH',
-          type: 'exam'
-        }))
+        .option.selected {
+          border-color: var(--primary-color);
+          background: rgba(99, 102, 241, 0.1);
+        }
 
-      setUpcomingDeadlines([...deadlines, ...examDeadlines]
-        .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
-        .slice(0, 5))
+        .option-letter {
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          background: var(--primary-color);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          margin-right: 1rem;
+        }
 
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error)
-      toast.error("Failed to load dashboard data")
-    } finally {
-      setLoading(false)
-    }
-  }
+        .option-text {
+          flex: 1;
+          font-weight: 500;
+        }
 
-  const taskCompletionData = {
-    labels: ["Completed", "Pending", "Overdue"],
-    datasets: [
-      {
-        data: [stats.completedTasks, stats.pendingTasks, Math.floor(stats.totalTasks * 0.1)],
-        backgroundColor: ["#22c55e", "#f59e0b", "#ef4444"],
-        borderWidth: 0,
-      },
-    ],
-  }
+        .exam-navigation {
+          display: flex;
+          justify-content: space-between;
+          padding: 1.5rem;
+          border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
 
-  const performanceData = {
-    labels: ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"],
-    datasets: [
-      {
-        label: "Score (%)",
-        data: [75, 82, 78, 85, stats.averageScore],
-        borderColor: "#6366f1",
-        backgroundColor: "rgba(99, 102, 241, 0.1)",
-        tension: 0.4,
-        fill: true,
-      },
-    ],
-  }
+        /* Result Modal Styles */
+        .result-modal {
+          max-width: 600px;
+        }
 
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "bottom",
-      },
-    },
-  }
+        .result-header {
+          text-align: center;
+          padding: 2rem 1.5rem;
+          background: linear-gradient(135deg, var(--light-color), rgba(99, 102, 241, 0.05));
+        }
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffTime = date - now
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    
-    if (diffDays === 0) return "Today"
-    if (diffDays === 1) return "Tomorrow"
-    if (diffDays < 7) return `${diffDays} days`
-    return date.toLocaleDateString()
-  }
+        .result-icon {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 1rem;
+          font-size: 2.5rem;
+          color: white;
+        }
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "LOW": return "success"
-      case "MEDIUM": return "warning"
-      case "HIGH": return "danger"
-      case "URGENT": return "danger"
-      default: return "secondary"
-    }
-  }
+        .result-icon.success {
+          background: linear-gradient(135deg, var(--success-color), #34d399);
+          animation: successPulse 2s infinite;
+        }
 
-  if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center min-vh-100">
-        <div className="text-center">
-          <div className="spinner-border text-primary mb-3\" style={{ width: "3rem", height: "3rem" }}>
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <h5 className="text-muted">Loading Dashboard...</h5>
-        </div>
-      </div>
-    )
-  }
+        .result-icon.danger {
+          background: linear-gradient(135deg, var(--danger-color), #f87171);
+          animation: dangerShake 0.5s ease-in-out;
+        }
 
-  return (
-    <div className="student-dashboard-container fade-in">
-      {/* Welcome Section */}
-      <div className="row mb-4">
-        <div className="col-12">
-          <div className="welcome-banner">
-            <div className="welcome-content">
-              <div className="col-md-8">
-                <h2 className="mb-2">Welcome back! 👋</h2>
-                <p className="mb-3 opacity-75">
-                  You have {stats.pendingTasks} pending tasks and {stats.upcomingExams} upcoming exams.
-                  Keep up the great work!
-                </p>
-                <div className="d-flex gap-2">
-                  <Link to="/dashboard/tasks" className="btn btn-light btn-custom">
-                    <i className="bi bi-list-task me-2"></i>
-                    View Tasks
-                  </Link>
-                  <Link to="/dashboard/exams" className="btn btn-outline-light btn-custom">
-                    <i className="bi bi-clipboard-check me-2"></i>
-                    View Exams
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        @keyframes successPulse {
+          0%,
+          100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.1);
+          }
+        }
 
-      {/* Stats Cards */}
-      <div className="row mb-4">
-        <div className="col-lg-3 col-md-6 mb-3">
-          <div className="stat-card">
-            <div className="stat-icon bg-primary text-white">
-              <i className="bi bi-list-task"></i>
-            </div>
-            <div className="stat-value text-primary">{stats.totalTasks}</div>
-            <div className="stat-label">Total Tasks</div>
-          </div>
-        </div>
-        <div className="col-lg-3 col-md-6 mb-3">
-          <div className="stat-card">
-            <div className="stat-icon bg-success text-white">
-              <i className="bi bi-check-circle"></i>
-            </div>
-            <div className="stat-value text-success">{stats.completedTasks}</div>
-            <div className="stat-label">Completed</div>
-          </div>
-        </div>
-        <div className="col-lg-3 col-md-6 mb-3">
-          <div className="stat-card">
-            <div className="stat-icon bg-warning text-white">
-              <i className="bi bi-clock"></i>
-            </div>
-            <div className="stat-value text-warning">{stats.pendingTasks}</div>
-            <div className="stat-label">Pending</div>
-          </div>
-        </div>
-        <div className="col-lg-3 col-md-6 mb-3">
-          <div className="stat-card">
-            <div className="stat-icon bg-info text-white">
-              <i className="bi bi-graph-up"></i>
-            </div>
-            <div className="stat-value text-info">{stats.averageScore}%</div>
-            <div className="stat-label">Average Score</div>
-          </div>
-        </div>
-      </div>
+        @keyframes dangerShake {
+          0%,
+          100% {
+            transform: translateX(0);
+          }
+          25% {
+            transform: translateX(-5px);
+          }
+          75% {
+            transform: translateX(5px);
+          }
+        }
 
-      {/* Charts and Activity */}
-      <div className="row mb-4">
-        <div className="col-lg-4 mb-3">
-          <div className="chart-card">
-            <h5 className="mb-3">
-              <i className="bi bi-pie-chart me-2"></i>
-              Task Progress
-            </h5>
-            <div className="chart-container">
-              <Doughnut data={taskCompletionData} options={chartOptions} />
-            </div>
-          </div>
-        </div>
-        <div className="col-lg-8 mb-3">
-          <div className="chart-card">
-            <h5 className="mb-3">
-              <i className="bi bi-graph-up me-2"></i>
-              Performance Trend
-            </h5>
-            <div className="chart-container">
-              <Line data={performanceData} options={chartOptions} />
-            </div>
-          </div>
-        </div>
-      </div>
+        .result-header h3 {
+          margin-bottom: 0.5rem;
+          font-weight: 700;
+        }
 
-      {/* Recent Activity and Upcoming Deadlines */}
-      <div className="row">
-        <div className="col-lg-6 mb-3">
-          <div className="activity-card">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <h5 className="mb-0">
-                <i className="bi bi-activity me-2"></i>
-                Recent Activity
-              </h5>
-              <Link to="/dashboard/notifications" className="btn btn-sm btn-outline-primary">
-                View All
-              </Link>
-            </div>
-            <div className="activity-timeline">
-              {recentActivity.length > 0 ? recentActivity.map((activity) => (
-                <div key={activity.id} className="activity-item">
-                  <div className={`activity-icon bg-${activity.color} text-white`}>
-                    <i className={activity.icon}></i>
-                  </div>
-                  <div className="activity-content">
-                    <div className="activity-title">{activity.title}</div>
-                    <div className="activity-time">{activity.time}</div>
-                  </div>
-                </div>
-              )) : (
-                <div className="text-center text-muted py-4">
-                  <i className="bi bi-clock-history fs-1 mb-2"></i>
-                  <p>No recent activity</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="col-lg-6 mb-3">
-          <div className="deadlines-card">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <h5 className="mb-0">
-                <i className="bi bi-calendar-event me-2"></i>
-                Upcoming Deadlines
-              </h5>
-              <Link to="/dashboard/calendar" className="btn btn-sm btn-outline-primary">
-                View Calendar
-              </Link>
-            </div>
-            <div className="deadlines-list">
-              {upcomingDeadlines.length > 0 ? upcomingDeadlines.map((deadline) => (
-                <div key={deadline.id} className="deadline-item">
-                  <div className="deadline-content">
-                    <div className="deadline-title">{deadline.title}</div>
-                    <div className="deadline-meta">
-                      <span className="badge bg-light text-dark">{deadline.subject}</span>
-                      <span className={`badge bg-${getPriorityColor(deadline.priority)}`}>
-                        {deadline.priority}
-                      </span>
-                      <span className="badge bg-info">
-                        {deadline.type === 'exam' ? 'Exam' : 'Task'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="deadline-time">
-                    <span className="text-muted small">Due in</span>
-                    <div className="fw-bold">{formatDate(deadline.dueDate)}</div>
-                  </div>
-                </div>
-              )) : (
-                <div className="text-center text-muted py-4">
-                  <i className="bi bi-calendar-check fs-1 mb-2"></i>
-                  <p>No upcoming deadlines</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+        .result-details {
+          padding: 2rem 1.5rem;
+          text-align: center;
+        }
+
+        .score-circle {
+          width: 150px;
+          height: 150px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 2rem;
+          color: white;
+          position: relative;
+          animation: scoreReveal 1s ease-out;
+        }
+
+        @keyframes scoreReveal {
+          from {
+            transform: scale(0) rotate(180deg);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1) rotate(0deg);
+            opacity: 1;
+          }
+        }
+
+        .score-value {
+          font-size: 2.5rem;
+          font-weight: 800;
+        }
+
+        .score-grade {
+          font-size: 1rem;
+          opacity: 0.9;
+        }
+
+        .result-stats {
+          display: flex;
+          justify-content: space-around;
+          gap: 1rem;
+        }
+
+        .stat {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-weight: 600;
+        }
+
+        .result-footer {
+          display: flex;
+          gap: 1rem;
+          justify-content: center;
+          padding: 1.5rem;
+          border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        /* Calendar Styles */
+        .calendar-container {
+          width: 100%;
+        }
+
+        .calendar-weekdays {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 1px;
+          margin-bottom: 1px;
+          background-color: #e5e7eb;
+        }
+
+        .weekday-header {
+          background-color: #f8fafc;
+          padding: 1rem;
+          text-align: center;
+          font-weight: 600;
+          color: #374151;
+          text-transform: uppercase;
+          font-size: 0.875rem;
+          letter-spacing: 0.05em;
+        }
+
+        .calendar-grid {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 1px;
+          background-color: #e5e7eb;
+        }
+
+        .calendar-day {
+          background-color: white;
+          min-height: 120px;
+          padding: 0.75rem;
+          display: flex;
+          flex-direction: column;
+          transition: all 0.2s ease;
+          cursor: pointer;
+        }
+
+        .calendar-day:hover {
+          background-color: #f8fafc;
+        }
+
+        .calendar-day.today {
+          background-color: #dbeafe;
+          border: 2px solid #3b82f6;
+        }
+
+        .calendar-day.empty {
+          background-color: #f9fafb;
+          opacity: 0.5;
+          cursor: default;
+        }
+
+        .calendar-day.empty:hover {
+          background-color: #f9fafb;
+        }
+
+        .day-number {
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 0.5rem;
+          font-size: 0.875rem;
+        }
+
+        .calendar-day.today .day-number {
+          color: #1d4ed8;
+          font-weight: 700;
+        }
+
+        .day-events {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .event-item {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
+          font-size: 0.75rem;
+          font-weight: 500;
+          line-height: 1.2;
+          transition: all 0.2s ease;
+        }
+
+        .event-item:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .event-item.exam {
+          background-color: #fef2f2;
+          color: #dc2626;
+          border: 1px solid #fecaca;
+        }
+
+        .event-item.task {
+          background-color: #eff6ff;
+          color: #2563eb;
+          border: 1px solid #bfdbfe;
+        }
+
+        .event-title {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          flex: 1;
+        }
+
+        .event-more {
+          font-size: 0.7rem;
+          color: #6b7280;
+          font-weight: 500;
+          text-align: center;
+          padding: 0.125rem;
+        }
+
+        @media (max-width: 768px) {
+          .calendar-day {
+            min-height: 80px;
+            padding: 0.5rem;
+          }
+
+          .weekday-header {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.75rem;
+          }
+
+          .event-item {
+            font-size: 0.7rem;
+            padding: 0.125rem 0.25rem;
+          }
+
+          .day-number {
+            font-size: 0.8rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .calendar-day {
+            min-height: 60px;
+            padding: 0.25rem;
+          }
+
+          .weekday-header {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.7rem;
+          }
+
+          .event-item {
+            font-size: 0.65rem;
+          }
+
+          .event-title {
+            display: none;
+          }
+
+          .event-item {
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            padding: 0;
+          }
+        }
+      `}</style>
     </div>
   )
 }
