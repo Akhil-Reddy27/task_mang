@@ -207,6 +207,9 @@ app.use("*", (req, res) => {
       "POST /api/auth/register",
       "POST /api/auth/login",
       "GET /api/auth/me",
+      "GET /api/users",
+      "GET /api/tasks",
+      "GET /api/exams",
     ],
   })
 })
