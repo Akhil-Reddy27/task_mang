@@ -653,7 +653,7 @@ const CreateExam = () => {
                 <div className="card-body" style={{ maxHeight: "400px", overflowY: "auto" }}>
                   {studentsLoading ? (
                     <div className="text-center py-4">
-                      <div className="spinner-border text-primary\" role=\"status">
+                      <div className="spinner-border text-primary\" role="status">
                         <span className="visually-hidden">Loading students...</span>
                       </div>
                       <p className="mt-2 text-muted">Loading students...</p>
@@ -972,7 +972,7 @@ const CreateExam = () => {
                 {currentStep > 1 && (
                   <button
                     type="button"
-                    className="btn btn-outline-secondary"
+                    className="btn btn-outline-dark btn-lg"
                     onClick={prevStep}
                   >
                     <i className="bi bi-arrow-left me-2"></i>
@@ -984,7 +984,7 @@ const CreateExam = () => {
                 {currentStep < 3 ? (
                   <button
                     type="button"
-                    className="btn btn-primary"
+                    className="btn btn-primary btn-lg"
                     onClick={nextStep}
                   >
                     Next
@@ -993,12 +993,12 @@ const CreateExam = () => {
                 ) : (
                   <button
                     type="submit"
-                    className="btn btn-success"
+                    className="btn btn-success btn-lg"
                     disabled={loading}
                   >
                     {loading ? (
                       <>
-                        <span className="spinner-border spinner-border-sm me-2\" role=\"status"></span>
+                        <span className="spinner-border spinner-border-sm me-2\" role="status"></span>
                         Creating...
                       </>
                     ) : (
@@ -1097,6 +1097,60 @@ const CreateExam = () => {
 
         .border-success {
           border-color: #198754 !important;
+        }
+
+        /* Enhanced button styles */
+        .btn-primary {
+          background-color: #0d6efd;
+          border-color: #0d6efd;
+          color: white;
+          font-weight: 600;
+          padding: 0.75rem 1.5rem;
+          box-shadow: 0 4px 6px rgba(13, 110, 253, 0.25);
+          transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+          background-color: #0b5ed7;
+          border-color: #0a58ca;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 12px rgba(13, 110, 253, 0.3);
+        }
+        
+        .btn-success {
+          background-color: #198754;
+          border-color: #198754;
+          color: white;
+          font-weight: 600;
+          padding: 0.75rem 1.5rem;
+          box-shadow: 0 4px 6px rgba(25, 135, 84, 0.25);
+          transition: all 0.3s ease;
+        }
+        
+        .btn-success:hover {
+          background-color: #157347;
+          border-color: #146c43;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 12px rgba(25, 135, 84, 0.3);
+        }
+        
+        .btn-outline-dark {
+          color: #212529;
+          border-color: #212529;
+          font-weight: 600;
+          padding: 0.75rem 1.5rem;
+          transition: all 0.3s ease;
+        }
+        
+        .btn-outline-dark:hover {
+          background-color: #212529;
+          color: white;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-lg {
+          font-size: 1.1rem;
         }
       `}</style>
     </div>
