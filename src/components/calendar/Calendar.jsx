@@ -2,68 +2,111 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "../../contexts/AuthContext"
+import toast from "react-hot-toast"
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showCreateEventModal, setShowCreateEventModal] = useState(false)
+  const [newEvent, setNewEvent] = useState({
+    title: "",
+    description: "",
+    date: "",
+    time: "",
+    type: "task",
+    subject: ""
+  })
   const { user } = useAuth()
 
-  // Mock events - replace with API call in production
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        setLoading(true)
-        // Simulate API call
-        setTimeout(() => {
-          const mockEvents = [
-            {
-              id: 1,
-              title: "Mathematics Quiz",
-              date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 15),
-              type: "exam",
-              subject: "Mathematics",
-            },
-            {
-              id: 2,
-              title: "Physics Assignment Due",
-              date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 18),
-              type: "task",
-              subject: "Physics",
-            },
-            {
-              id: 3,
-              title: "Chemistry Lab Report",
-              date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 22),
-              type: "task",
-              subject: "Chemistry",
-            },
-            {
-              id: 4,
-              title: "English Literature Essay",
-              date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 10),
-              type: "task",
-              subject: "English",
-            },
-            {
-              id: 5,
-              title: "Biology Final Exam",
-              date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 28),
-              type: "exam",
-              subject: "Biology",
-            },
-          ]
-          setEvents(mockEvents)
-          setLoading(false)
-        }, 1000)
-      } catch (error) {
-        console.error("Error fetching events:", error)
-        setLoading(false)
-      }
-    }
-
     fetchEvents()
   }, [currentDate])
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true)
+      // Simulate API call
+      setTimeout(() => {
+        const mockEvents = [
+          {
+            id: 1,
+            title: "Mathematics Quiz",
+            date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 15),
+            type: "exam",
+            subject: "Mathematics",
+          },
+          {
+            id: 2,
+            title: "Physics Assignment Due",
+            date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 18),
+            type: "task",
+            subject: "Physics",
+          },
+          {
+            id: 3,
+            title: "Chemistry Lab Report",
+            date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 22),
+            type: "task",
+            subject: "Chemistry",
+          },
+          {
+            id: 4,
+            title: "English Literature Essay",
+            date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 10),
+            type: "task",
+            subject: "English",
+          },
+          {
+            id: 5,
+            title: "Biology Final Exam",
+            date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 28),
+            type: "exam",
+            subject: "Biology",
+          },
+        ]
+        setEvents(mockEvents)
+        setLoading(false)
+      }, 1000)
+    } catch (error) {
+      console.error("Error fetching events:", error)
+      setLoading(false)
+    }
+  }
+
+  const handleCreateEvent = () => {
+    setShowCreateEventModal(true)
+  }
+
+  const saveEvent = () => {
+    if (!newEvent.title || !newEvent.date) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
+    const eventDate = new Date(newEvent.date + (newEvent.time ? `T${newEvent.time}` : 'T09:00'))
+    
+    const event = {
+      id: Date.now(),
+      title: newEvent.title,
+      description: newEvent.description,
+      date: eventDate,
+      type: newEvent.type,
+      subject: newEvent.subject
+    }
+
+    setEvents(prev => [...prev, event])
+    setShowCreateEventModal(false)
+    setNewEvent({
+      title: "",
+      description: "",
+      date: "",
+      time: "",
+      type: "task",
+      subject: ""
+    })
+    toast.success("Event created successfully!")
+  }
 
   const daysInMonth = (year, month) => {
     return new Date(year, month + 1, 0).getDate()
@@ -182,7 +225,7 @@ const Calendar = () => {
           Calendar
         </h2>
         {user?.role === "TUTOR" && (
-          <button className="btn btn-primary">
+          <button className="btn btn-primary" onClick={handleCreateEvent}>
             <i className="bi bi-plus-lg me-2"></i>
             Add Event
           </button>
@@ -193,7 +236,7 @@ const Calendar = () => {
         <div className="card-body">
           {loading ? (
             <div className="d-flex justify-content-center align-items-center p-5">
-              <div className="spinner-border text-primary\" role="status">
+              <div className="spinner-border text-primary" role="status">
                 <span className="visually-hidden">Loading...</span>
               </div>
             </div>
@@ -202,6 +245,112 @@ const Calendar = () => {
           )}
         </div>
       </div>
+
+      {/* Create Event Modal */}
+      {showCreateEventModal && (
+        <div className="modal show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="bi bi-calendar-plus me-2"></i>
+                  Create New Event
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close"
+                  onClick={() => setShowCreateEventModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Event Title *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter event title"
+                    value={newEvent.title}
+                    onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Description</label>
+                  <textarea
+                    className="form-control"
+                    rows="3"
+                    placeholder="Enter event description"
+                    value={newEvent.description}
+                    onChange={(e) => setNewEvent(prev => ({ ...prev, description: e.target.value }))}
+                  ></textarea>
+                </div>
+                <div className="row mb-3">
+                  <div className="col-md-6">
+                    <label className="form-label">Date *</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={newEvent.date}
+                      onChange={(e) => setNewEvent(prev => ({ ...prev, date: e.target.value }))}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Time</label>
+                    <input
+                      type="time"
+                      className="form-control"
+                      value={newEvent.time}
+                      onChange={(e) => setNewEvent(prev => ({ ...prev, time: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="row mb-3">
+                  <div className="col-md-6">
+                    <label className="form-label">Type</label>
+                    <select
+                      className="form-select"
+                      value={newEvent.type}
+                      onChange={(e) => setNewEvent(prev => ({ ...prev, type: e.target.value }))}
+                    >
+                      <option value="task">Task</option>
+                      <option value="exam">Exam</option>
+                      <option value="meeting">Meeting</option>
+                      <option value="deadline">Deadline</option>
+                    </select>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Subject</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Enter subject"
+                      value={newEvent.subject}
+                      onChange={(e) => setNewEvent(prev => ({ ...prev, subject: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => setShowCreateEventModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary"
+                  onClick={saveEvent}
+                  disabled={!newEvent.title || !newEvent.date}
+                >
+                  <i className="bi bi-check me-2"></i>
+                  Create Event
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .calendar-container {

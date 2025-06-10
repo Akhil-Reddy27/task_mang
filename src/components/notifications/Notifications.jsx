@@ -2,24 +2,40 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "../../contexts/AuthContext"
-import { useNavigate } from "react-router-dom"
+import axios from "axios"
+import toast from "react-hot-toast"
 
 const Notifications = () => {
   const { user } = useAuth()
-  const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
   const [filter, setFilter] = useState("all")
   const [loading, setLoading] = useState(true)
   const [showNewMessageModal, setShowNewMessageModal] = useState(false)
+  const [students, setStudents] = useState([])
   const [newMessage, setNewMessage] = useState({
-    recipient: "",
+    recipientId: "",
+    recipientName: "",
     subject: "",
     message: ""
   })
 
   useEffect(() => {
     fetchNotifications()
-  }, [])
+    if (user?.role === "TUTOR") {
+      fetchStudents()
+    }
+  }, [user])
+
+  const fetchStudents = async () => {
+    try {
+      const response = await axios.get("/api/users?role=STUDENT")
+      if (response.data.success) {
+        setStudents(response.data.users || [])
+      }
+    } catch (error) {
+      console.error("Error fetching students:", error)
+    }
+  }
 
   const fetchNotifications = async () => {
     try {
@@ -112,25 +128,45 @@ const Notifications = () => {
     setShowNewMessageModal(true)
   }
 
-  const sendNewMessage = () => {
-    // Here you would typically send the message via API
-    console.log("Sending message:", newMessage)
-    
-    // Add the new message as a notification (for demo purposes)
-    const newNotification = {
-      id: Date.now(),
-      type: "message",
-      title: "Message Sent",
-      message: `Message sent to ${newMessage.recipient}: ${newMessage.subject}`,
-      time: new Date(),
-      read: false,
-      icon: "bi-send",
-      color: "success"
+  const handleStudentSelect = (student) => {
+    setNewMessage(prev => ({
+      ...prev,
+      recipientId: student._id,
+      recipientName: student.fullName
+    }))
+  }
+
+  const sendNewMessage = async () => {
+    if (!newMessage.recipientId || !newMessage.subject || !newMessage.message) {
+      toast.error("Please fill in all required fields")
+      return
     }
-    
-    setNotifications(prev => [newNotification, ...prev])
-    setShowNewMessageModal(false)
-    setNewMessage({ recipient: "", subject: "", message: "" })
+
+    try {
+      // Here you would typically send the message via API
+      console.log("Sending message:", newMessage)
+      
+      // Add the new message as a notification (for demo purposes)
+      const newNotification = {
+        id: Date.now(),
+        type: "message",
+        title: "Message Sent",
+        message: `Message sent to ${newMessage.recipientName}: ${newMessage.subject}`,
+        time: new Date(),
+        read: false,
+        icon: "bi-send",
+        color: "success"
+      }
+      
+      setNotifications(prev => [newNotification, ...prev])
+      setShowNewMessageModal(false)
+      setNewMessage({ recipientId: "", recipientName: "", subject: "", message: "" })
+      toast.success("Message sent successfully!")
+      
+    } catch (error) {
+      console.error("Error sending message:", error)
+      toast.error("Failed to send message")
+    }
   }
 
   const filteredNotifications = notifications.filter(notif => {
@@ -233,7 +269,7 @@ const Notifications = () => {
             <div className="card-body p-0">
               {loading ? (
                 <div className="d-flex justify-content-center align-items-center p-5">
-                  <div className="spinner-border text-primary\" role="status">
+                  <div className="spinner-border text-primary" role="status">
                     <span className="visually-hidden">Loading...</span>
                   </div>
                 </div>
@@ -322,7 +358,7 @@ const Notifications = () => {
       {/* New Message Modal */}
       {showNewMessageModal && (
         <div className="modal show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog">
+          <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
@@ -337,17 +373,39 @@ const Notifications = () => {
               </div>
               <div className="modal-body">
                 <div className="mb-3">
-                  <label className="form-label">Recipient</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Enter recipient name or email"
-                    value={newMessage.recipient}
-                    onChange={(e) => setNewMessage(prev => ({ ...prev, recipient: e.target.value }))}
-                  />
+                  <label className="form-label">Select Recipient *</label>
+                  <div className="row">
+                    <div className="col-md-8">
+                      <select
+                        className="form-select"
+                        value={newMessage.recipientId}
+                        onChange={(e) => {
+                          const selectedStudent = students.find(s => s._id === e.target.value)
+                          if (selectedStudent) {
+                            handleStudentSelect(selectedStudent)
+                          }
+                        }}
+                      >
+                        <option value="">Choose a student...</option>
+                        {students.map(student => (
+                          <option key={student._id} value={student._id}>
+                            {student.fullName} ({student.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-md-4">
+                      {newMessage.recipientName && (
+                        <div className="alert alert-info py-2 mb-0">
+                          <i className="bi bi-person-check me-2"></i>
+                          {newMessage.recipientName}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div className="mb-3">
-                  <label className="form-label">Subject</label>
+                  <label className="form-label">Subject *</label>
                   <input
                     type="text"
                     className="form-control"
@@ -357,15 +415,21 @@ const Notifications = () => {
                   />
                 </div>
                 <div className="mb-3">
-                  <label className="form-label">Message</label>
+                  <label className="form-label">Message *</label>
                   <textarea
                     className="form-control"
-                    rows="4"
+                    rows="5"
                     placeholder="Type your message here..."
                     value={newMessage.message}
                     onChange={(e) => setNewMessage(prev => ({ ...prev, message: e.target.value }))}
                   ></textarea>
                 </div>
+                {students.length === 0 && (
+                  <div className="alert alert-warning">
+                    <i className="bi bi-exclamation-triangle me-2"></i>
+                    No students found. Please ensure students are enrolled in your courses.
+                  </div>
+                )}
               </div>
               <div className="modal-footer">
                 <button 
@@ -379,7 +443,7 @@ const Notifications = () => {
                   type="button" 
                   className="btn btn-primary"
                   onClick={sendNewMessage}
-                  disabled={!newMessage.recipient || !newMessage.subject || !newMessage.message}
+                  disabled={!newMessage.recipientId || !newMessage.subject || !newMessage.message}
                 >
                   <i className="bi bi-send me-2"></i>
                   Send Message

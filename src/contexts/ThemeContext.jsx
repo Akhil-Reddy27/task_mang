@@ -21,11 +21,37 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem("theme", theme)
     document.documentElement.setAttribute("data-theme", theme)
+    
+    // Apply theme to body class for better CSS targeting
+    document.body.className = document.body.className.replace(/theme-\w+/g, '')
+    document.body.classList.add(`theme-${theme}`)
+    
+    // Apply CSS variables based on theme
+    const root = document.documentElement
+    if (theme === "dark") {
+      root.style.setProperty("--bs-body-bg", "#1a1a1a")
+      root.style.setProperty("--bs-body-color", "#ffffff")
+      root.style.setProperty("--bs-card-bg", "#2d2d2d")
+      root.style.setProperty("--bs-border-color", "#404040")
+    } else {
+      root.style.setProperty("--bs-body-bg", "#ffffff")
+      root.style.setProperty("--bs-body-color", "#212529")
+      root.style.setProperty("--bs-card-bg", "#ffffff")
+      root.style.setProperty("--bs-border-color", "#dee2e6")
+    }
   }, [theme])
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"))
   }
 
-  return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>
+  const setSpecificTheme = (newTheme) => {
+    setTheme(newTheme)
+  }
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme, setSpecificTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  )
 }
