@@ -536,7 +536,7 @@ const CreateExam = () => {
                 <div className="card-body" style={{ maxHeight: "400px", overflowY: "auto" }}>
                   {studentsLoading ? (
                     <div className="text-center text-muted py-4">
-                      <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                      <div className="spinner-border spinner-border-sm me-2\" role="status"></div>
                       Loading students...
                     </div>
                   ) : students.length === 0 ? (
@@ -879,7 +879,7 @@ const CreateExam = () => {
                   >
                     {loading ? (
                       <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <span className="spinner-border spinner-border-sm me-2\" role="status"></span>
                         Creating...
                       </>
                     ) : (
