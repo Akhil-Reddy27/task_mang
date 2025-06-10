@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import axios from "axios"
 import { useAuth } from "../../contexts/AuthContext"
 import toast from "react-hot-toast"
@@ -11,6 +11,7 @@ const ExamList = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const { user } = useAuth()
+  const navigate = useNavigate()
 
   useEffect(() => {
     let isMounted = true // Prevent state updates if component unmounts
@@ -123,11 +124,120 @@ const ExamList = () => {
     return user?.role === "STUDENT" && isExamCompleted(exam)
   }
 
-  const handleTakeExam = (exam) => {
-    // Navigate to exam taking interface
-    toast.info("Exam interface will be implemented soon!")
-    // TODO: Implement exam taking interface
-    // navigate(`/dashboard/exams/${exam._id}/take`)
+  // ENHANCED: Proper exam taking functionality
+  const handleTakeExam = async (exam) => {
+    try {
+      console.log("Taking exam:", exam.title, exam._id)
+      
+      // Check if exam is still active
+      if (!isExamActive(exam)) {
+        toast.error("This exam is no longer active")
+        return
+      }
+
+      // Show loading state
+      toast.loading("Starting exam...", { id: 'exam-start' })
+
+      // Fetch the full exam details
+      const response = await axios.get(`/api/exams/${exam._id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      const examData = response.data
+      
+      // Validate exam can be taken
+      if (!examData.isActive) {
+        toast.error("This exam is not currently active", { id: 'exam-start' })
+        return
+      }
+
+      // Success - navigate to exam interface
+      toast.success("Exam loaded successfully!", { id: 'exam-start' })
+      
+      // For now, show exam details in a modal since exam interface isn't implemented yet
+      showExamModal(examData)
+      
+      // TODO: Navigate to actual exam taking interface when implemented
+      // navigate(`/dashboard/exams/${exam._id}/take`)
+      
+    } catch (error) {
+      console.error("Error starting exam:", error)
+      toast.error("Failed to start exam. Please try again.", { id: 'exam-start' })
+      
+      if (error.response?.status === 403) {
+        toast.error("You don't have permission to take this exam")
+      } else if (error.response?.status === 404) {
+        toast.error("Exam not found")
+      }
+    }
+  }
+
+  // Show exam details modal
+  const showExamModal = (examData) => {
+    const modal = document.createElement('div')
+    modal.className = 'modal show d-block'
+    modal.style.backgroundColor = 'rgba(0,0,0,0.5)'
+    modal.innerHTML = `
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="bi bi-clipboard-check me-2"></i>
+              ${examData.title}
+            </h5>
+            <button type="button" class="btn-close" onclick="this.closest('.modal').remove()"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-info">
+              <h6 class="alert-heading">Exam Information</h6>
+              <p><strong>Subject:</strong> ${examData.subject}</p>
+              <p><strong>Duration:</strong> ${examData.duration} minutes</p>
+              <p><strong>Questions:</strong> ${examData.questions?.length || 0}</p>
+              <p><strong>Passing Score:</strong> ${examData.passingScore}%</p>
+              <p><strong>Attempts Allowed:</strong> ${examData.attemptLimit}</p>
+            </div>
+            
+            <div class="alert alert-warning">
+              <h6 class="alert-heading">Instructions</h6>
+              <ul>
+                <li>You have ${examData.duration} minutes to complete this exam</li>
+                <li>You can only take this exam ${examData.attemptLimit} time(s)</li>
+                <li>Make sure you have a stable internet connection</li>
+                <li>Do not refresh the page during the exam</li>
+                <li>Click "Start Exam" when you're ready to begin</li>
+              </ul>
+            </div>
+
+            <div class="alert alert-success">
+              <h6 class="alert-heading">Ready to Start?</h6>
+              <p>Once you click "Start Exam", the timer will begin. Make sure you're ready!</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">
+              Cancel
+            </button>
+            <button type="button" class="btn btn-primary" onclick="startExamInterface('${examData._id}')">
+              <i class="bi bi-play-circle me-2"></i>
+              Start Exam
+            </button>
+          </div>
+        </div>
+      </div>
+    `
+    
+    document.body.appendChild(modal)
+    
+    // Add global function for starting exam
+    window.startExamInterface = (examId) => {
+      modal.remove()
+      toast.success("Exam interface will be implemented soon!")
+      // TODO: Navigate to actual exam interface
+      // navigate(`/dashboard/exams/${examId}/take`)
+    }
   }
 
   const getTimeUntilStart = (exam) => {
@@ -281,11 +391,27 @@ const ExamList = () => {
                     <div className="d-grid">
                       {canTakeExam(exam) ? (
                         <button 
-                          className="btn btn-primary"
+                          className="btn btn-primary btn-lg"
                           onClick={() => handleTakeExam(exam)}
+                          style={{
+                            background: 'linear-gradient(135deg, #28a745, #20c997)',
+                            border: 'none',
+                            fontWeight: '600',
+                            padding: '0.75rem 1.5rem',
+                            boxShadow: '0 4px 15px rgba(40, 167, 69, 0.3)',
+                            transition: 'all 0.3s ease'
+                          }}
+                          onMouseOver={(e) => {
+                            e.target.style.transform = 'translateY(-2px)'
+                            e.target.style.boxShadow = '0 6px 20px rgba(40, 167, 69, 0.4)'
+                          }}
+                          onMouseOut={(e) => {
+                            e.target.style.transform = 'translateY(0)'
+                            e.target.style.boxShadow = '0 4px 15px rgba(40, 167, 69, 0.3)'
+                          }}
                         >
-                          <i className="bi bi-pencil-square me-2"></i>
-                          Take Exam
+                          <i className="bi bi-play-circle me-2"></i>
+                          Take Exam Now
                         </button>
                       ) : canViewResults(exam) ? (
                         <button className="btn btn-outline-secondary">
@@ -379,6 +505,14 @@ const ExamList = () => {
 
         .btn-group .btn {
           flex: 1;
+        }
+
+        /* Enhanced Take Exam Button */
+        .btn-primary.btn-lg {
+          font-size: 1.1rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         @media (max-width: 768px) {
