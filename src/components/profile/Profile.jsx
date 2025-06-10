@@ -320,7 +320,7 @@ const Profile = () => {
                     <button type="submit" className="btn btn-primary" disabled={loading}>
                       {loading ? (
                         <>
-                          <span className="spinner-border spinner-border-sm me-2\" role="status"></span>
+                          <span className="spinner-border spinner-border-sm me-2\" role=\"status"></span>
                           Saving...
                         </>
                       ) : (
@@ -419,7 +419,7 @@ const Profile = () => {
                     >
                       {loading ? (
                         <>
-                          <span className="spinner-border spinner-border-sm me-2\" role="status"></span>
+                          <span className="spinner-border spinner-border-sm me-2\" role=\"status"></span>
                           Updating...
                         </>
                       ) : (
