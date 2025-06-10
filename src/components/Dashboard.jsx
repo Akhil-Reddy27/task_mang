@@ -14,6 +14,9 @@ import ExamAnalytics from "./exams/ExamAnalytics"
 import Calendar from "./calendar/Calendar"
 import Chat from "./chat/Chat"
 import Profile from "./profile/Profile"
+import StudentsManagement from "./students/StudentsManagement"
+import Analytics from "./analytics/Analytics"
+import Notifications from "./notifications/Notifications"
 import "../styles/dashboard.css"
 
 const Dashboard = () => {
@@ -65,7 +68,7 @@ const Dashboard = () => {
                     </button>
                     <ul className="dropdown-menu">
                       <li>
-                        <a className="dropdown-item" href="#">
+                        <a className="dropdown-item" href="/dashboard/profile">
                           <i className="bi bi-person me-2"></i>My Profile
                         </a>
                       </li>
@@ -104,6 +107,9 @@ const Dashboard = () => {
               <Route path="/calendar" element={<Calendar />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/students" element={<StudentsManagement />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/notifications" element={<Notifications />} />
             </Routes>
           </div>
         </div>

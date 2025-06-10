@@ -328,7 +328,7 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     // Find user
-    const user = await User.findOne({ email })
+    const user = await User.findOne({ email: email.toLowerCase().trim() })
     if (!user) {
       console.log("❌ User not found:", email)
       return res.status(400).json({ message: "Invalid email or password" })
@@ -440,14 +440,20 @@ app.post("/api/tasks", auth, async (req, res) => {
 app.get("/api/exams", auth, async (req, res) => {
   try {
     console.log("=== EXAMS REQUEST RECEIVED ===")
+    console.log("User role:", req.user.role)
+    console.log("User ID:", req.user.userId)
     
     const query = { isActive: { $ne: false } }
 
     if (req.user.role === "TUTOR") {
       query.tutor = req.user.userId
+      console.log("Fetching exams for tutor:", req.user.userId)
     } else if (req.user.role === "STUDENT") {
       query.assignedTo = req.user.userId
+      console.log("Fetching exams assigned to student:", req.user.userId)
     }
+
+    console.log("Query:", query)
 
     const exams = await Exam.find(query)
       .populate("tutor", "fullName")
@@ -455,6 +461,12 @@ app.get("/api/exams", auth, async (req, res) => {
       .sort({ createdAt: -1 })
 
     console.log(`✅ Found ${exams.length} exams`)
+    
+    // Log exam details for debugging
+    exams.forEach(exam => {
+      console.log(`Exam: ${exam.title}, Assigned to: ${exam.assignedTo.length} students`)
+    })
+    
     res.json(exams)
   } catch (error) {
     console.error("❌ Exams error:", error)
@@ -520,6 +532,8 @@ app.post("/api/exams", auth, async (req, res) => {
       }
     }
 
+    console.log("Creating exam with assigned students:", assignedTo)
+
     const exam = new Exam({
       ...req.body,
       tutor: req.user.userId,
@@ -530,6 +544,8 @@ app.post("/api/exams", auth, async (req, res) => {
     await exam.populate("assignedTo", "fullName email")
 
     console.log("✅ Exam created successfully:", exam._id)
+    console.log("Assigned to students:", exam.assignedTo.map(s => s.fullName))
+    
     res.status(201).json({
       message: "Exam created successfully",
       exam,

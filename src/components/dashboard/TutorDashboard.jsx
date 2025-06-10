@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import {
   Chart as ChartJS,
   ArcElement,
@@ -20,6 +20,7 @@ import toast from "react-hot-toast"
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement)
 
 const TutorDashboard = () => {
+  const navigate = useNavigate()
   const [stats, setStats] = useState({
     totalStudents: 0,
     activeTasks: 0,
@@ -120,6 +121,11 @@ const TutorDashboard = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Handle navigation clicks
+  const handleNavigation = (path) => {
+    navigate(path)
   }
 
   const studentEngagementData = {
@@ -241,7 +247,7 @@ const TutorDashboard = () => {
     return (
       <div className="d-flex justify-content-center align-items-center min-vh-100">
         <div className="text-center">
-          <div className="spinner-border text-primary mb-3\" style={{ width: "3rem", height: "3rem" }}>
+          <div className="spinner-border text-primary mb-3" style={{ width: "3rem", height: "3rem" }}>
             <span className="visually-hidden">Loading...</span>
           </div>
           <h5 className="text-muted">Loading Dashboard...</h5>
@@ -418,10 +424,13 @@ const TutorDashboard = () => {
                 Subject Performance Comparison
               </h5>
               <div className="chart-actions">
-                <Link to="/dashboard/analytics" className="btn btn-sm btn-primary">
+                <button 
+                  className="btn btn-sm btn-primary"
+                  onClick={() => handleNavigation('/dashboard/analytics')}
+                >
                   <i className="bi bi-eye me-1"></i>
                   View Details
-                </Link>
+                </button>
               </div>
             </div>
             <div className="chart-body">
@@ -442,9 +451,12 @@ const TutorDashboard = () => {
                 <i className="bi bi-bar-chart me-2 text-info"></i>
                 Subject Performance
               </h5>
-              <Link to="/dashboard/analytics" className="btn btn-sm btn-outline-primary">
+              <button 
+                className="btn btn-sm btn-outline-primary"
+                onClick={() => handleNavigation('/dashboard/analytics')}
+              >
                 <i className="bi bi-arrow-right"></i>
-              </Link>
+              </button>
             </div>
             <div className="card-body">
               <div className="performance-list">
@@ -490,9 +502,12 @@ const TutorDashboard = () => {
                 <i className="bi bi-activity me-2 text-success"></i>
                 Recent Activity
               </h5>
-              <Link to="/dashboard/notifications" className="btn btn-sm btn-outline-primary">
+              <button 
+                className="btn btn-sm btn-outline-primary"
+                onClick={() => handleNavigation('/dashboard/notifications')}
+              >
                 <i className="bi bi-bell"></i>
-              </Link>
+              </button>
             </div>
             <div className="card-body">
               <div className="activity-timeline">
@@ -506,9 +521,12 @@ const TutorDashboard = () => {
                       <div className="timeline-time">{activity.time}</div>
                     </div>
                     {activity.link && (
-                      <Link to={activity.link} className="timeline-action">
+                      <button 
+                        className="timeline-action"
+                        onClick={() => handleNavigation(activity.link)}
+                      >
                         <i className="bi bi-arrow-right"></i>
-                      </Link>
+                      </button>
                     )}
                   </div>
                 )) : (
@@ -579,9 +597,9 @@ const TutorDashboard = () => {
                     color: "danger"
                   }
                 ].map((action, index) => (
-                  <Link 
+                  <button 
                     key={index}
-                    to={action.link} 
+                    onClick={() => handleNavigation(action.link)}
                     className="quick-action-item"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
@@ -597,7 +615,7 @@ const TutorDashboard = () => {
                     <div className="action-arrow">
                       <i className="bi bi-arrow-right"></i>
                     </div>
-                  </Link>
+                  </button>
                 ))}
               </div>
             </div>
@@ -1034,7 +1052,9 @@ const TutorDashboard = () => {
 
         .timeline-action {
           color: #6b7280;
-          text-decoration: none;
+          background: none;
+          border: none;
+          cursor: pointer;
           transition: all 0.3s ease;
         }
 
@@ -1064,10 +1084,11 @@ const TutorDashboard = () => {
           padding: 1.5rem;
           background: #f8fafc;
           border-radius: 16px;
-          text-decoration: none;
-          color: inherit;
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           border: 2px solid transparent;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
+          width: 100%;
+          text-align: left;
         }
 
         .quick-action-item:hover {
@@ -1075,7 +1096,6 @@ const TutorDashboard = () => {
           border-color: #e5e7eb;
           transform: translateY(-4px);
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-          color: inherit;
         }
 
         .action-icon-wrapper {
