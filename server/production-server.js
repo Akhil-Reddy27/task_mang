@@ -386,6 +386,8 @@ app.get("/api/auth/me", auth, async (req, res) => {
 app.get("/api/tasks", auth, async (req, res) => {
   try {
     console.log("=== TASKS REQUEST RECEIVED ===")
+    console.log("User role:", req.user.role)
+    console.log("User ID:", req.user.userId)
     
     const query = { isActive: { $ne: false } }
 
@@ -394,6 +396,8 @@ app.get("/api/tasks", auth, async (req, res) => {
     } else if (req.user.role === "STUDENT") {
       query.assignedTo = req.user.userId
     }
+
+    console.log("Tasks query:", query)
 
     const tasks = await Task.find(query)
       .populate("tutor", "fullName email")
@@ -436,7 +440,7 @@ app.post("/api/tasks", auth, async (req, res) => {
   }
 })
 
-// Exams routes
+// Exams routes - FIXED VISIBILITY ISSUE
 app.get("/api/exams", auth, async (req, res) => {
   try {
     console.log("=== EXAMS REQUEST RECEIVED ===")
@@ -446,14 +450,16 @@ app.get("/api/exams", auth, async (req, res) => {
     const query = { isActive: { $ne: false } }
 
     if (req.user.role === "TUTOR") {
+      // Tutors see exams they created
       query.tutor = req.user.userId
       console.log("Fetching exams for tutor:", req.user.userId)
     } else if (req.user.role === "STUDENT") {
-      query.assignedTo = req.user.userId
+      // Students see exams assigned to them
+      query.assignedTo = { $in: [req.user.userId] }
       console.log("Fetching exams assigned to student:", req.user.userId)
     }
 
-    console.log("Query:", query)
+    console.log("Exams query:", JSON.stringify(query, null, 2))
 
     const exams = await Exam.find(query)
       .populate("tutor", "fullName")
@@ -464,7 +470,10 @@ app.get("/api/exams", auth, async (req, res) => {
     
     // Log exam details for debugging
     exams.forEach(exam => {
-      console.log(`Exam: ${exam.title}, Assigned to: ${exam.assignedTo.length} students`)
+      console.log(`Exam: ${exam.title}`)
+      console.log(`  - Created by tutor: ${exam.tutor?._id}`)
+      console.log(`  - Assigned to: ${exam.assignedTo?.length || 0} students`)
+      console.log(`  - Student IDs: ${exam.assignedTo?.map(s => s._id).join(', ')}`)
     })
     
     res.json(exams)
@@ -534,9 +543,18 @@ app.post("/api/exams", auth, async (req, res) => {
 
     console.log("Creating exam with assigned students:", assignedTo)
 
+    // Convert assignedTo to ObjectIds if they're strings
+    const assignedToObjectIds = assignedTo.map(id => {
+      if (typeof id === 'string') {
+        return new mongoose.Types.ObjectId(id)
+      }
+      return id
+    })
+
     const exam = new Exam({
       ...req.body,
       tutor: req.user.userId,
+      assignedTo: assignedToObjectIds
     })
 
     await exam.save()
@@ -544,7 +562,7 @@ app.post("/api/exams", auth, async (req, res) => {
     await exam.populate("assignedTo", "fullName email")
 
     console.log("✅ Exam created successfully:", exam._id)
-    console.log("Assigned to students:", exam.assignedTo.map(s => s.fullName))
+    console.log("Assigned to students:", exam.assignedTo.map(s => `${s.fullName} (${s._id})`))
     
     res.status(201).json({
       message: "Exam created successfully",

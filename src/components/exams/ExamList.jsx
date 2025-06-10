@@ -13,6 +13,8 @@ const ExamList = () => {
   const { user } = useAuth()
 
   useEffect(() => {
+    let isMounted = true // Prevent state updates if component unmounts
+
     const fetchExams = async () => {
       try {
         setLoading(true)
@@ -26,30 +28,41 @@ const ExamList = () => {
         })
         
         console.log("Exams response:", response.data)
-        setExams(response.data || [])
-        setError(null)
+        
+        if (isMounted) {
+          setExams(response.data || [])
+          setError(null)
+        }
       } catch (err) {
         console.error("Error fetching exams:", err)
         
-        if (err.response?.status === 401) {
-          setError("Authentication failed. Please login again.")
-          toast.error("Please login again")
-        } else if (err.response?.status === 404) {
-          setError("Exams endpoint not found. Please check server configuration.")
-        } else {
-          setError("Failed to load exams. Please try again later.")
+        if (isMounted) {
+          if (err.response?.status === 401) {
+            setError("Authentication failed. Please login again.")
+            toast.error("Please login again")
+          } else if (err.response?.status === 404) {
+            setError("Exams endpoint not found. Please check server configuration.")
+          } else {
+            setError("Failed to load exams. Please try again later.")
+          }
+          
+          setExams([])
         }
-        
-        setExams([])
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
     if (user) {
       fetchExams()
     }
-  }, [user])
+
+    return () => {
+      isMounted = false // Cleanup function to prevent memory leaks
+    }
+  }, [user]) // Only depend on user, not on every render
 
   const formatDate = (dateString) => {
     const date = new Date(dateString)
@@ -98,6 +111,11 @@ const ExamList = () => {
 
   const canViewResults = (exam) => {
     return user?.role === "STUDENT" && isExamCompleted(exam)
+  }
+
+  const handleTakeExam = (exam) => {
+    // Navigate to exam taking interface
+    window.location.href = `/exam/${exam._id}/take`
   }
 
   if (loading) {
@@ -222,7 +240,10 @@ const ExamList = () => {
                   {user?.role === "STUDENT" ? (
                     <div className="d-grid">
                       {canTakeExam(exam) ? (
-                        <button className="btn btn-primary">
+                        <button 
+                          className="btn btn-primary"
+                          onClick={() => handleTakeExam(exam)}
+                        >
                           <i className="bi bi-pencil-square me-2"></i>
                           Take Exam
                         </button>
