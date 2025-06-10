@@ -1282,7 +1282,7 @@ const StudentDashboard = () => {
                   <div className="tasks-grid">
                     {tasks.length === 0 ? (
                       <div className="text-center p-5">
-                        <i className="bi bi-clipboard text-muted" style={{ fontSize: "3rem" }}></i>
+                        <i className="bi bi-clipboard text-muted\" style={{ fontSize: "3rem" }}></i>
                         <h5 className="mt-3">No Tasks Found</h5>
                         <p className="text-muted">You don't have any tasks yet.</p>
                         <button className="btn btn-primary" onClick={() => setShowTaskModal(true)}>
@@ -1398,7 +1398,7 @@ const StudentDashboard = () => {
                 {exams.length === 0 ? (
                   <div className="col-12">
                     <div className="text-center p-5">
-                      <i className="bi bi-clipboard text-muted" style={{ fontSize: "3rem" }}></i>
+                      <i className="bi bi-clipboard text-muted\" style={{ fontSize: "3rem" }}></i>
                       <h5 className="mt-3">No Exams Found</h5>
                       <p className="text-muted">You don't have any exams yet.</p>
                     </div>
