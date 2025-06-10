@@ -97,10 +97,10 @@ const TaskList = () => {
           {user?.role === "STUDENT" ? "My Tasks" : "Manage Tasks"}
         </h2>
         {user?.role === "TUTOR" && (
-          <button className="btn btn-primary">
+          <Link to="/dashboard/tasks/create" className="btn btn-primary">
             <i className="bi bi-plus-lg me-2"></i>
             Create Task
-          </button>
+          </Link>
         )}
       </div>
 
@@ -115,10 +115,10 @@ const TaskList = () => {
                 : "You haven't created any tasks yet."}
             </p>
             {user?.role === "TUTOR" && (
-              <button className="btn btn-primary mt-2">
+              <Link to="/dashboard/tasks/create" className="btn btn-primary mt-2">
                 <i className="bi bi-plus-lg me-2"></i>
                 Create Your First Task
-              </button>
+              </Link>
             )}
           </div>
         </div>

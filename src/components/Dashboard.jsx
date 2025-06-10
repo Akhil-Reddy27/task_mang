@@ -1,9 +1,19 @@
 "use client"
 
 import { useState } from "react"
+import { Routes, Route } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import StudentDashboard from "./dashboard/StudentDashboard"
 import TutorDashboard from "./dashboard/TutorDashboard"
+import TaskList from "./tasks/TaskList"
+import CreateTask from "./tasks/CreateTask"
+import ExamList from "./exams/ExamList"
+import CreateExam from "./exams/CreateExam"
+import ExamResult from "./exams/ExamResult"
+import ExamAnalytics from "./exams/ExamAnalytics"
+import Calendar from "./calendar/Calendar"
+import Chat from "./chat/Chat"
+import Profile from "./profile/Profile"
 import "../styles/dashboard.css"
 
 const Dashboard = () => {
@@ -82,7 +92,20 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <div className="dashboard-main">
-          <div className="container-fluid">{user.role === "STUDENT" ? <StudentDashboard /> : <TutorDashboard />}</div>
+          <div className="container-fluid">
+            <Routes>
+              <Route path="/" element={user.role === "STUDENT" ? <StudentDashboard /> : <TutorDashboard />} />
+              <Route path="/tasks" element={<TaskList />} />
+              <Route path="/tasks/create" element={<CreateTask />} />
+              <Route path="/exams" element={<ExamList />} />
+              <Route path="/exams/create" element={<CreateExam />} />
+              <Route path="/exams/:examId/result/:resultId" element={<ExamResult />} />
+              <Route path="/exams/:examId/analytics" element={<ExamAnalytics />} />
+              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/chat" element={<Chat />} />
+              <Route path="/profile" element={<Profile />} />
+            </Routes>
+          </div>
         </div>
       </div>
     </div>

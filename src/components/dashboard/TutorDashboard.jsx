@@ -131,11 +131,11 @@ const TutorDashboard = () => {
                     {stats.completedExams} exams have been completed this week.
                   </p>
                   <div className="d-flex gap-2">
-                    <Link to="/dashboard/tasks" className="btn btn-light btn-custom">
+                    <Link to="/dashboard/tasks/create" className="btn btn-light btn-custom">
                       <i className="bi bi-plus-circle me-2"></i>
                       Create Task
                     </Link>
-                    <Link to="/dashboard/exams" className="btn btn-outline-light btn-custom">
+                    <Link to="/dashboard/exams/create" className="btn btn-outline-light btn-custom">
                       <i className="bi bi-clipboard-check me-2"></i>
                       Create Exam
                     </Link>

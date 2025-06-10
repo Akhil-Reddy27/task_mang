@@ -88,10 +88,10 @@ const ExamList = () => {
           {user?.role === "STUDENT" ? "My Exams" : "Manage Exams"}
         </h2>
         {user?.role === "TUTOR" && (
-          <button className="btn btn-primary">
+          <Link to="/dashboard/exams/create" className="btn btn-primary">
             <i className="bi bi-plus-lg me-2"></i>
             Create Exam
-          </button>
+          </Link>
         )}
       </div>
 
@@ -106,10 +106,10 @@ const ExamList = () => {
                 : "You haven't created any exams yet."}
             </p>
             {user?.role === "TUTOR" && (
-              <button className="btn btn-primary mt-2">
+              <Link to="/dashboard/exams/create" className="btn btn-primary mt-2">
                 <i className="bi bi-plus-lg me-2"></i>
                 Create Your First Exam
-              </button>
+              </Link>
             )}
           </div>
         </div>
