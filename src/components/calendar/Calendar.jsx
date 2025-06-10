@@ -88,20 +88,15 @@ const Calendar = () => {
     const firstDay = firstDayOfMonth(year, month)
     const today = new Date()
 
-    const days = []
     const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-
-    // Add weekday headers
-    const weekdayHeaders = weekdays.map((day) => (
-      <div key={`header-${day}`} className="text-center fw-bold p-2">
-        {day}
-      </div>
-    ))
+    const calendarDays = []
 
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDay; i++) {
-      days.push(
-        <div key={`empty-${i}`} className="border p-2 bg-light opacity-50" style={{ minHeight: "120px" }}></div>,
+      calendarDays.push(
+        <div key={`empty-${i}`} className="calendar-day empty">
+          <div className="day-number"></div>
+        </div>
       )
     }
 
@@ -115,62 +110,67 @@ const Calendar = () => {
         (event) => event.date.getDate() === day && event.date.getMonth() === month && event.date.getFullYear() === year,
       )
 
-      days.push(
+      calendarDays.push(
         <div
           key={`day-${day}`}
-          className={`border p-2 ${isToday ? "bg-primary bg-opacity-10" : ""}`}
-          style={{ minHeight: "120px" }}
+          className={`calendar-day ${isToday ? "today" : ""}`}
         >
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <span className={`${isToday ? "fw-bold text-primary" : ""}`}>{day}</span>
-            {dayEvents.length > 0 && <span className="badge bg-primary rounded-pill">{dayEvents.length}</span>}
-          </div>
-
-          <div className="calendar-events">
-            {dayEvents.map((event) => (
+          <div className="day-number">{day}</div>
+          <div className="day-events">
+            {dayEvents.slice(0, 2).map((event) => (
               <div
                 key={event.id}
-                className={`calendar-event p-1 mb-1 rounded small ${
-                  event.type === "exam" ? "bg-danger text-white" : "bg-info text-white"
-                }`}
-                title={event.title}
+                className={`event-item ${event.type === "exam" ? "exam" : "task"}`}
+                title={`${event.title} - ${event.subject}`}
               >
-                <div className="text-truncate">
-                  <i className={`bi ${event.type === "exam" ? "bi-clipboard-check" : "bi-list-task"} me-1`}></i>
-                  {event.title}
-                </div>
-                <div className="text-truncate small opacity-75">{event.subject}</div>
+                <i className={`bi ${event.type === "exam" ? "bi-clipboard-check" : "bi-list-task"}`}></i>
+                <span className="event-title">{event.title}</span>
               </div>
             ))}
+            {dayEvents.length > 2 && (
+              <div className="event-more">+{dayEvents.length - 2} more</div>
+            )}
           </div>
-        </div>,
+        </div>
       )
     }
 
     return (
-      <>
-        <div className="calendar-header d-flex justify-content-between align-items-center mb-4">
-          <h2 className="mb-0">
-            {currentDate.toLocaleString("default", { month: "long" })} {currentDate.getFullYear()}
-          </h2>
-          <div className="btn-group">
-            <button className="btn btn-outline-primary" onClick={prevMonth}>
-              <i className="bi bi-chevron-left"></i>
-            </button>
-            <button className="btn btn-outline-primary" onClick={() => setCurrentDate(new Date())}>
-              Today
-            </button>
-            <button className="btn btn-outline-primary" onClick={nextMonth}>
-              <i className="bi bi-chevron-right"></i>
-            </button>
+      <div className="calendar-container">
+        {/* Calendar Header */}
+        <div className="calendar-header">
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <h3 className="mb-0">
+              {currentDate.toLocaleString("default", { month: "long" })} {currentDate.getFullYear()}
+            </h3>
+            <div className="btn-group">
+              <button className="btn btn-outline-primary" onClick={prevMonth}>
+                <i className="bi bi-chevron-left"></i>
+              </button>
+              <button className="btn btn-outline-primary" onClick={() => setCurrentDate(new Date())}>
+                Today
+              </button>
+              <button className="btn btn-outline-primary" onClick={nextMonth}>
+                <i className="bi bi-chevron-right"></i>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="calendar-grid">
-          <div className="row g-0 bg-light">{weekdayHeaders}</div>
-          <div className="row g-0">{days}</div>
+        {/* Weekday Headers */}
+        <div className="calendar-weekdays">
+          {weekdays.map((day) => (
+            <div key={day} className="weekday-header">
+              {day}
+            </div>
+          ))}
         </div>
-      </>
+
+        {/* Calendar Grid */}
+        <div className="calendar-grid">
+          {calendarDays}
+        </div>
+      </div>
     )
   }
 
@@ -204,17 +204,179 @@ const Calendar = () => {
       </div>
 
       <style jsx>{`
-        .calendar-grid .row > div {
-          width: calc(100% / 7);
+        .calendar-container {
+          width: 100%;
         }
-        
-        .calendar-event {
-          font-size: 0.8rem;
+
+        .calendar-weekdays {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 1px;
+          margin-bottom: 1px;
+          background-color: #e5e7eb;
+        }
+
+        .weekday-header {
+          background-color: #f8fafc;
+          padding: 1rem;
+          text-align: center;
+          font-weight: 600;
+          color: #374151;
+          text-transform: uppercase;
+          font-size: 0.875rem;
+          letter-spacing: 0.05em;
+        }
+
+        .calendar-grid {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 1px;
+          background-color: #e5e7eb;
+        }
+
+        .calendar-day {
+          background-color: white;
+          min-height: 120px;
+          padding: 0.75rem;
+          display: flex;
+          flex-direction: column;
+          transition: all 0.2s ease;
           cursor: pointer;
+        }
+
+        .calendar-day:hover {
+          background-color: #f8fafc;
+        }
+
+        .calendar-day.today {
+          background-color: #dbeafe;
+          border: 2px solid #3b82f6;
+        }
+
+        .calendar-day.empty {
+          background-color: #f9fafb;
+          opacity: 0.5;
+          cursor: default;
+        }
+
+        .calendar-day.empty:hover {
+          background-color: #f9fafb;
+        }
+
+        .day-number {
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 0.5rem;
+          font-size: 0.875rem;
+        }
+
+        .calendar-day.today .day-number {
+          color: #1d4ed8;
+          font-weight: 700;
+        }
+
+        .day-events {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .event-item {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
+          font-size: 0.75rem;
+          font-weight: 500;
+          line-height: 1.2;
+          transition: all 0.2s ease;
+        }
+
+        .event-item:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .event-item.exam {
+          background-color: #fef2f2;
+          color: #dc2626;
+          border: 1px solid #fecaca;
+        }
+
+        .event-item.task {
+          background-color: #eff6ff;
+          color: #2563eb;
+          border: 1px solid #bfdbfe;
+        }
+
+        .event-title {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          flex: 1;
+        }
+
+        .event-more {
+          font-size: 0.7rem;
+          color: #6b7280;
+          font-weight: 500;
+          text-align: center;
+          padding: 0.125rem;
+        }
+
+        @media (max-width: 768px) {
+          .calendar-day {
+            min-height: 80px;
+            padding: 0.5rem;
+          }
+
+          .weekday-header {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.75rem;
+          }
+
+          .event-item {
+            font-size: 0.7rem;
+            padding: 0.125rem 0.25rem;
+          }
+
+          .day-number {
+            font-size: 0.8rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .calendar-day {
+            min-height: 60px;
+            padding: 0.25rem;
+          }
+
+          .weekday-header {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.7rem;
+          }
+
+          .event-item {
+            font-size: 0.65rem;
+          }
+
+          .event-title {
+            display: none;
+          }
+
+          .event-item {
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            padding: 0;
+          }
         }
       `}</style>
     </div>
   )
 }
 
-export default Calendar;
+export default Calendar

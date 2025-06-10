@@ -10,13 +10,6 @@ const StudentsManagement = () => {
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedSubject, setSelectedSubject] = useState("")
-  const [sortBy, setSortBy] = useState("name")
-
-  const subjects = [
-    "Mathematics", "Physics", "Chemistry", "Biology", 
-    "Computer Science", "English", "History", "Geography"
-  ]
 
   useEffect(() => {
     fetchStudents()
@@ -42,31 +35,11 @@ const StudentsManagement = () => {
     }
   }
 
-  const filteredStudents = students.filter(student => {
-    const matchesSearch = student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (student.studentId && student.studentId.toLowerCase().includes(searchTerm.toLowerCase()))
-    
-    const matchesSubject = !selectedSubject || 
-                          (student.enrolledSubjects && student.enrolledSubjects.includes(selectedSubject))
-    
-    return matchesSearch && matchesSubject
-  })
-
-  const sortedStudents = [...filteredStudents].sort((a, b) => {
-    switch (sortBy) {
-      case "name":
-        return a.fullName.localeCompare(b.fullName)
-      case "email":
-        return a.email.localeCompare(b.email)
-      case "studentId":
-        return (a.studentId || "").localeCompare(b.studentId || "")
-      case "joinDate":
-        return new Date(b.createdAt) - new Date(a.createdAt)
-      default:
-        return 0
-    }
-  })
+  const filteredStudents = students.filter(student => 
+    student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (student.studentId && student.studentId.toLowerCase().includes(searchTerm.toLowerCase()))
+  )
 
   if (user?.role !== "TUTOR") {
     return (
@@ -91,27 +64,17 @@ const StudentsManagement = () => {
               </h2>
               <p className="text-muted mb-0">View and organize your student groups</p>
             </div>
-            <div className="d-flex gap-2">
-              <button className="btn btn-outline-primary">
-                <i className="bi bi-download me-2"></i>
-                Export List
-              </button>
-              <button className="btn btn-primary">
-                <i className="bi bi-person-plus me-2"></i>
-                Add Student
-              </button>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Filters and Search */}
+      {/* Search */}
       <div className="row mb-4">
         <div className="col-12">
           <div className="card shadow-sm">
             <div className="card-body">
               <div className="row g-3">
-                <div className="col-md-4">
+                <div className="col-md-6">
                   <label className="form-label">Search Students</label>
                   <div className="input-group">
                     <span className="input-group-text">
@@ -126,44 +89,14 @@ const StudentsManagement = () => {
                     />
                   </div>
                 </div>
-                <div className="col-md-3">
-                  <label className="form-label">Filter by Subject</label>
-                  <select
-                    className="form-select"
-                    value={selectedSubject}
-                    onChange={(e) => setSelectedSubject(e.target.value)}
-                  >
-                    <option value="">All Subjects</option>
-                    {subjects.map(subject => (
-                      <option key={subject} value={subject}>{subject}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label">Sort by</label>
-                  <select
-                    className="form-select"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                  >
-                    <option value="name">Name</option>
-                    <option value="email">Email</option>
-                    <option value="studentId">Student ID</option>
-                    <option value="joinDate">Join Date</option>
-                  </select>
-                </div>
-                <div className="col-md-2">
+                <div className="col-md-6">
                   <label className="form-label">&nbsp;</label>
                   <button 
                     className="btn btn-outline-secondary w-100"
-                    onClick={() => {
-                      setSearchTerm("")
-                      setSelectedSubject("")
-                      setSortBy("name")
-                    }}
+                    onClick={() => setSearchTerm("")}
                   >
                     <i className="bi bi-arrow-clockwise me-1"></i>
-                    Reset
+                    Clear Search
                   </button>
                 </div>
               </div>
@@ -180,144 +113,80 @@ const StudentsManagement = () => {
               <div className="d-flex justify-content-between align-items-center">
                 <h5 className="mb-0">
                   <i className="bi bi-list me-2"></i>
-                  Students ({sortedStudents.length})
+                  Students ({filteredStudents.length})
                 </h5>
-                <div className="btn-group btn-group-sm">
-                  <button className="btn btn-outline-secondary active">
-                    <i className="bi bi-grid-3x3-gap"></i>
-                  </button>
-                  <button className="btn btn-outline-secondary">
-                    <i className="bi bi-list-ul"></i>
-                  </button>
-                </div>
               </div>
             </div>
             <div className="card-body p-0">
               {loading ? (
                 <div className="d-flex justify-content-center align-items-center p-5">
-                  <div className="spinner-border text-primary\" role="status">
+                  <div className="spinner-border text-primary" role="status">
                     <span className="visually-hidden">Loading...</span>
                   </div>
                 </div>
-              ) : sortedStudents.length === 0 ? (
+              ) : filteredStudents.length === 0 ? (
                 <div className="text-center p-5">
                   <i className="bi bi-person-x text-muted" style={{ fontSize: "3rem" }}></i>
                   <h5 className="mt-3">No Students Found</h5>
                   <p className="text-muted">
-                    {searchTerm || selectedSubject 
-                      ? "No students match your current filters." 
+                    {searchTerm 
+                      ? "No students match your search criteria." 
                       : "No students have been enrolled yet."
                     }
                   </p>
-                  {(searchTerm || selectedSubject) && (
+                  {searchTerm && (
                     <button 
                       className="btn btn-outline-primary"
-                      onClick={() => {
-                        setSearchTerm("")
-                        setSelectedSubject("")
-                      }}
+                      onClick={() => setSearchTerm("")}
                     >
-                      Clear Filters
+                      Clear Search
                     </button>
                   )}
                 </div>
               ) : (
-                <div className="row g-0">
-                  {sortedStudents.map((student, index) => (
-                    <div key={student._id} className="col-lg-4 col-md-6">
-                      <div className="student-card">
-                        <div className="student-card-body">
-                          <div className="d-flex align-items-start">
-                            <div className="student-avatar">
-                              <div className="avatar-circle bg-primary">
-                                {student.fullName.charAt(0).toUpperCase()}
+                <div className="table-responsive">
+                  <table className="table table-hover mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th>Student</th>
+                        <th>Email</th>
+                        <th>Student ID</th>
+                        <th>Join Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredStudents.map((student) => (
+                        <tr key={student._id}>
+                          <td>
+                            <div className="d-flex align-items-center">
+                              <div className="student-avatar me-3">
+                                <div className="avatar-circle bg-primary">
+                                  {student.fullName.charAt(0).toUpperCase()}
+                                </div>
                               </div>
-                              <div className="status-indicator bg-success"></div>
-                            </div>
-                            <div className="student-info flex-grow-1">
-                              <h6 className="student-name">{student.fullName}</h6>
-                              <p className="student-email">{student.email}</p>
-                              {student.studentId && (
-                                <p className="student-id">ID: {student.studentId}</p>
-                              )}
-                              <div className="student-meta">
-                                <small className="text-muted">
-                                  <i className="bi bi-calendar me-1"></i>
-                                  Joined {new Date(student.createdAt).toLocaleDateString()}
-                                </small>
-                              </div>
-                            </div>
-                            <div className="student-actions">
-                              <div className="dropdown">
-                                <button 
-                                  className="btn btn-sm btn-outline-secondary dropdown-toggle"
-                                  data-bs-toggle="dropdown"
-                                >
-                                  <i className="bi bi-three-dots"></i>
-                                </button>
-                                <ul className="dropdown-menu">
-                                  <li>
-                                    <a className="dropdown-item" href="#">
-                                      <i className="bi bi-eye me-2"></i>View Profile
-                                    </a>
-                                  </li>
-                                  <li>
-                                    <a className="dropdown-item" href="#">
-                                      <i className="bi bi-chat me-2"></i>Send Message
-                                    </a>
-                                  </li>
-                                  <li>
-                                    <a className="dropdown-item" href="#">
-                                      <i className="bi bi-graph-up me-2"></i>View Progress
-                                    </a>
-                                  </li>
-                                  <li><hr className="dropdown-divider" /></li>
-                                  <li>
-                                    <a className="dropdown-item text-danger" href="#">
-                                      <i className="bi bi-person-dash me-2"></i>Remove Student
-                                    </a>
-                                  </li>
-                                </ul>
+                              <div>
+                                <div className="fw-semibold">{student.fullName}</div>
+                                <small className="text-muted">{student.institution}</small>
                               </div>
                             </div>
-                          </div>
-                          
-                          {student.enrolledSubjects && student.enrolledSubjects.length > 0 && (
-                            <div className="student-subjects">
-                              <div className="subjects-label">Enrolled Subjects:</div>
-                              <div className="subjects-list">
-                                {student.enrolledSubjects.slice(0, 3).map((subject, idx) => (
-                                  <span key={idx} className="badge bg-light text-dark me-1 mb-1">
-                                    {subject}
-                                  </span>
-                                ))}
-                                {student.enrolledSubjects.length > 3 && (
-                                  <span className="badge bg-secondary">
-                                    +{student.enrolledSubjects.length - 3} more
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                          
-                          <div className="student-stats">
-                            <div className="stat-item">
-                              <div className="stat-value">8</div>
-                              <div className="stat-label">Tasks</div>
-                            </div>
-                            <div className="stat-item">
-                              <div className="stat-value">5</div>
-                              <div className="stat-label">Exams</div>
-                            </div>
-                            <div className="stat-item">
-                              <div className="stat-value">85%</div>
-                              <div className="stat-label">Avg Score</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                          </td>
+                          <td>
+                            <span className="text-muted">{student.email}</span>
+                          </td>
+                          <td>
+                            <span className="badge bg-light text-dark">
+                              {student.studentId || "N/A"}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="text-muted">
+                              {new Date(student.createdAt).toLocaleDateString()}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -326,128 +195,50 @@ const StudentsManagement = () => {
       </div>
 
       <style jsx>{`
-        .student-card {
-          border: 1px solid #e5e7eb;
-          border-radius: 12px;
-          margin: 1rem;
-          transition: all 0.3s ease;
-          background: white;
-        }
-
-        .student-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-          border-color: #3b82f6;
-        }
-
-        .student-card-body {
-          padding: 1.5rem;
-        }
-
         .student-avatar {
           position: relative;
-          margin-right: 1rem;
         }
 
         .avatar-circle {
-          width: 50px;
-          height: 50px;
+          width: 40px;
+          height: 40px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
           font-weight: 600;
-          font-size: 1.2rem;
+          font-size: 1rem;
         }
 
-        .status-indicator {
-          position: absolute;
-          bottom: 2px;
-          right: 2px;
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          border: 2px solid white;
-        }
-
-        .student-info {
-          min-width: 0;
-        }
-
-        .student-name {
-          margin-bottom: 0.25rem;
+        .table th {
+          border-top: none;
           font-weight: 600;
-          color: #1f2937;
-        }
-
-        .student-email {
-          margin-bottom: 0.25rem;
-          color: #6b7280;
+          color: #374151;
           font-size: 0.875rem;
-        }
-
-        .student-id {
-          margin-bottom: 0.5rem;
-          color: #9ca3af;
-          font-size: 0.8rem;
-        }
-
-        .student-meta {
-          margin-bottom: 1rem;
-        }
-
-        .student-subjects {
-          margin: 1rem 0;
-        }
-
-        .subjects-label {
-          font-size: 0.8rem;
-          color: #6b7280;
-          margin-bottom: 0.5rem;
-        }
-
-        .subjects-list {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.25rem;
-        }
-
-        .student-stats {
-          display: flex;
-          justify-content: space-around;
-          padding-top: 1rem;
-          border-top: 1px solid #f3f4f6;
-        }
-
-        .stat-item {
-          text-align: center;
-        }
-
-        .stat-value {
-          font-weight: 700;
-          font-size: 1.1rem;
-          color: #1f2937;
-        }
-
-        .stat-label {
-          font-size: 0.75rem;
-          color: #6b7280;
           text-transform: uppercase;
           letter-spacing: 0.05em;
         }
 
-        .student-actions {
-          margin-left: auto;
+        .table td {
+          vertical-align: middle;
+          border-color: #f3f4f6;
+          padding: 1rem 0.75rem;
+        }
+
+        .table tbody tr:hover {
+          background-color: #f8fafc;
         }
 
         @media (max-width: 768px) {
-          .student-card {
-            margin: 0.5rem;
+          .table-responsive {
+            font-size: 0.875rem;
           }
           
-          .student-card-body {
-            padding: 1rem;
+          .avatar-circle {
+            width: 32px;
+            height: 32px;
+            font-size: 0.875rem;
           }
         }
       `}</style>

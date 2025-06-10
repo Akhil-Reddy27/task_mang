@@ -2,12 +2,20 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "../../contexts/AuthContext"
+import { useNavigate } from "react-router-dom"
 
 const Notifications = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
   const [filter, setFilter] = useState("all")
   const [loading, setLoading] = useState(true)
+  const [showNewMessageModal, setShowNewMessageModal] = useState(false)
+  const [newMessage, setNewMessage] = useState({
+    recipient: "",
+    subject: "",
+    message: ""
+  })
 
   useEffect(() => {
     fetchNotifications()
@@ -100,6 +108,31 @@ const Notifications = () => {
     setNotifications(prev => prev.filter(notif => notif.id !== id))
   }
 
+  const handleNewMessage = () => {
+    setShowNewMessageModal(true)
+  }
+
+  const sendNewMessage = () => {
+    // Here you would typically send the message via API
+    console.log("Sending message:", newMessage)
+    
+    // Add the new message as a notification (for demo purposes)
+    const newNotification = {
+      id: Date.now(),
+      type: "message",
+      title: "Message Sent",
+      message: `Message sent to ${newMessage.recipient}: ${newMessage.subject}`,
+      time: new Date(),
+      read: false,
+      icon: "bi-send",
+      color: "success"
+    }
+    
+    setNotifications(prev => [newNotification, ...prev])
+    setShowNewMessageModal(false)
+    setNewMessage({ recipient: "", subject: "", message: "" })
+  }
+
   const filteredNotifications = notifications.filter(notif => {
     if (filter === "unread") return !notif.read
     if (filter === "read") return notif.read
@@ -138,6 +171,13 @@ const Notifications = () => {
               <p className="text-muted mb-0">Stay updated with your latest activities</p>
             </div>
             <div className="d-flex gap-2">
+              <button 
+                className="btn btn-success"
+                onClick={handleNewMessage}
+              >
+                <i className="bi bi-plus-circle me-2"></i>
+                New Message
+              </button>
               {unreadCount > 0 && (
                 <button 
                   className="btn btn-outline-primary"
@@ -147,10 +187,6 @@ const Notifications = () => {
                   Mark All Read
                 </button>
               )}
-              <button className="btn btn-primary">
-                <i className="bi bi-gear me-2"></i>
-                Settings
-              </button>
             </div>
           </div>
         </div>
@@ -197,7 +233,7 @@ const Notifications = () => {
             <div className="card-body p-0">
               {loading ? (
                 <div className="d-flex justify-content-center align-items-center p-5">
-                  <div className="spinner-border text-primary\" role="status">
+                  <div className="spinner-border text-primary" role="status">
                     <span className="visually-hidden">Loading...</span>
                   </div>
                 </div>
@@ -282,6 +318,77 @@ const Notifications = () => {
           </div>
         </div>
       </div>
+
+      {/* New Message Modal */}
+      {showNewMessageModal && (
+        <div className="modal show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="bi bi-envelope me-2"></i>
+                  New Message
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close"
+                  onClick={() => setShowNewMessageModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Recipient</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter recipient name or email"
+                    value={newMessage.recipient}
+                    onChange={(e) => setNewMessage(prev => ({ ...prev, recipient: e.target.value }))}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Subject</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter message subject"
+                    value={newMessage.subject}
+                    onChange={(e) => setNewMessage(prev => ({ ...prev, subject: e.target.value }))}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Message</label>
+                  <textarea
+                    className="form-control"
+                    rows="4"
+                    placeholder="Type your message here..."
+                    value={newMessage.message}
+                    onChange={(e) => setNewMessage(prev => ({ ...prev, message: e.target.value }))}
+                  ></textarea>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => setShowNewMessageModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary"
+                  onClick={sendNewMessage}
+                  disabled={!newMessage.recipient || !newMessage.subject || !newMessage.message}
+                >
+                  <i className="bi bi-send me-2"></i>
+                  Send Message
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .notifications-list {
