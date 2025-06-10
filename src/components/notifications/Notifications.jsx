@@ -233,7 +233,7 @@ const Notifications = () => {
             <div className="card-body p-0">
               {loading ? (
                 <div className="d-flex justify-content-center align-items-center p-5">
-                  <div className="spinner-border text-primary" role="status">
+                  <div className="spinner-border text-primary\" role="status">
                     <span className="visually-hidden">Loading...</span>
                   </div>
                 </div>
